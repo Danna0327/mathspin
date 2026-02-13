@@ -1,52 +1,31 @@
-require("dotenv").config();
-const express = require("express");
-const mongoose = require("mongoose");
-const path = require("path");
+require("dotenv").config()
+const express = require("express")
+const cors = require("cors")
+const path = require("path")
 
-const app = express();
+const app = express()
 
-// =============================
-// 🔹 CONEXIÓN A MONGODB
-// =============================
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ Conexión a MongoDB exitosa");
-  } catch (error) {
-    console.error("❌ Error de conexión a MongoDB:", error);
-    process.exit(1);
-  }
-};
+app.use(cors())
+app.use(express.json())
 
-connectDB();
-
-// =============================
-// 🔹 MIDDLEWARES
-// =============================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// =============================
-// 🔹 ARCHIVOS ESTÁTICOS
-// =============================
-app.use(express.static(path.join(__dirname, "public")));
-
-// Ruta principal
+// ============================
+// 🔥 PRUEBA SIMPLE ROOT
+// ============================
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+  res.send("MATHSPIN BACKEND FUNCIONANDO CORRECTAMENTE 🚀")
+})
 
-// =============================
-// 🔹 PUERTO (IMPORTANTE PARA RAILWAY)
-// =============================
-const PORT = process.env.PORT;
+// ============================
+// 🔥 SERVIR ARCHIVOS PUBLIC
+// ============================
+const staticDir = path.join(__dirname, "public")
+app.use(express.static(staticDir))
 
-if (!PORT) {
-  console.error("❌ Railway no asignó un puerto");
-  process.exit(1);
-}
+// ============================
+// 🔥 PUERTO RAILWAY
+// ============================
+const PORT = process.env.PORT || 8080
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-});
-
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`)
+})
