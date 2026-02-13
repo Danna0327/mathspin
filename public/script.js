@@ -5,8 +5,9 @@
 const API_BASE_URL =
   window.location.hostname === "localhost"
     ? "http://localhost:5000/api"
-    : "/api";
+    : `${window.location.origin}/api`;
 
+console.log('🔍 API_BASE_URL:', API_BASE_URL);
 
 /* =========================================================
    VARIABLES GLOBALES (Juego)
@@ -108,7 +109,6 @@ function showRegisterScreen() { showScreen("registerScreen"); }
 function showGameScreen() { showScreen("gameScreen"); updateUserInfo(); }
 function showQuestionScreen() { showScreen("questionScreen"); }
 function showResultsScreen() { showScreen("resultsScreen"); }
-function showTeacherDashboard() { showScreen("teacherDashboard"); updateTeacherInfo(); /* aquí puedes iniciar dashboard */ }
 
 /* =========================================================
    LOGIN MODAL
@@ -148,7 +148,7 @@ function showLoading(show) {
 }
 
 /* =========================================================
-   AUTH
+   AUTH - LOGIN (CORREGIDO)
 ========================================================= */
 async function handleLogin(e) {
   e.preventDefault();
@@ -158,6 +158,8 @@ async function handleLogin(e) {
   const contrasena = document.getElementById("loginPassword").value;
 
   try {
+    console.log('🔐 Intentando login para:', nombreUsuario);
+    
     const response = await fetch(`${API_BASE_URL}/users/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -168,8 +170,11 @@ async function handleLogin(e) {
 
     if (!response.ok) {
       document.getElementById("errorMessage").textContent = data.mensaje || "Error al iniciar sesión";
+      showLoading(false);
       return;
     }
+
+    console.log('✅ Login exitoso:', data);
 
     localStorage.setItem("token", data.token);
     localStorage.setItem("userRole", data.rol);
@@ -184,13 +189,18 @@ async function handleLogin(e) {
 
     document.getElementById("errorMessage").textContent = "";
 
-    if (data.rol === "docente") {
+    // ✅ FIX CRÍTICO: Redirigir a dashboard-docente.html
+    if (data.rol === "docente" || data.rol === "admin") {
+      console.log('🎓 Docente/Admin detectado, redirigiendo a dashboard...');
       hideLoginModal();
-      showTeacherDashboard();
+      showLoading(false);
+      window.location.href = '/dashboard-docente.html';
       return;
     }
 
-    // estudiante
+    // Flujo para estudiante
+    console.log('🎮 Estudiante detectado, mostrando selector de dificultad...');
+    
     document.getElementById("loginUsername").setAttribute("disabled", true);
     document.getElementById("loginPassword").setAttribute("disabled", true);
 
@@ -206,7 +216,7 @@ async function handleLogin(e) {
     };
 
   } catch (err) {
-    console.error("Error en login:", err);
+    console.error("❌ Error en login:", err);
     document.getElementById("errorMessage").textContent =
       "Error de conexión. Verifica que el servidor esté funcionando.";
   } finally {
@@ -214,6 +224,9 @@ async function handleLogin(e) {
   }
 }
 
+/* =========================================================
+   AUTH - REGISTRO
+========================================================= */
 async function handleRegister(e) {
   e.preventDefault();
   showLoading(true);
@@ -288,8 +301,13 @@ async function handleRegister(e) {
   }
 }
 
-function validateUsername(username) { return username.length >= 8 && /\d/.test(username); }
-function validatePassword(password) { return password.length >= 8 && /\d/.test(password); }
+function validateUsername(username) { 
+  return username.length >= 8 && /\d/.test(username); 
+}
+
+function validatePassword(password) { 
+  return password.length >= 8 && /\d/.test(password); 
+}
 
 /* =========================================================
    USER INFO
@@ -300,12 +318,6 @@ function updateUserInfo() {
   const courseEl = document.getElementById("currentUserCourse");
   if (nameEl) nameEl.textContent = currentUser.nombre || currentUser.nombreUsuario;
   if (courseEl) courseEl.textContent = `10mo EGB - Paralelo ${currentUser.paralelo || "A"}`;
-}
-
-function updateTeacherInfo() {
-  if (!currentUser) return;
-  const el = document.getElementById("teacherName");
-  if (el) el.textContent = currentUser.nombre || currentUser.nombreUsuario;
 }
 
 /* =========================================================
@@ -372,13 +384,19 @@ async function startQuestions() {
     if (response.ok) {
       const data = await response.json();
       currentQuestions = data.preguntas || [];
+      console.log(`📚 Preguntas obtenidas: ${currentQuestions.length}`);
     } else {
+      console.warn('⚠️ No se pudieron obtener preguntas del servidor');
       currentQuestions = [];
     }
 
-    if (!currentQuestions.length) currentQuestions = getExampleQuestions();
+    if (!currentQuestions.length) {
+      console.log('📝 Usando preguntas de ejemplo');
+      currentQuestions = getExampleQuestions();
+    }
 
     currentQuestions = shuffleArray(currentQuestions).slice(0, 5);
+    console.log(`✅ Total de preguntas para jugar: ${currentQuestions.length}`);
 
     showQuestionScreen();
     setTimeout(() => loadQuestion(), 250);
@@ -401,28 +419,52 @@ function shuffleArray(array) {
 }
 
 function getExampleQuestions() {
-  const example = {
+  const examples = {
     numeros: [
-      { titulo: "¿Cuánto es el doble de 11?", opciones: ["21", "20", "22", "23"], respuestaCorrecta: "c" },
+      { titulo: "¿Cuánto es 15 + 27?", opciones: ["40", "41", "42", "43"], respuestaCorrecta: "c" },
+      { titulo: "¿Cuál es el doble de 11?", opciones: ["21", "20", "22", "23"], respuestaCorrecta: "c" },
+      { titulo: "¿Cuánto es 9 × 8?", opciones: ["63", "72", "81", "64"], respuestaCorrecta: "b" },
+      { titulo: "¿Cuál es la raíz cuadrada de 64?", opciones: ["6", "7", "8", "9"], respuestaCorrecta: "c" },
+      { titulo: "¿Cuánto es 100 ÷ 4?", opciones: ["20", "25", "30", "35"], respuestaCorrecta: "b" },
     ],
     geometria: [
       { titulo: "¿Cuántos lados tiene un hexágono?", opciones: ["5", "6", "7", "8"], respuestaCorrecta: "b" },
+      { titulo: "¿Cuántos grados tiene un ángulo recto?", opciones: ["45°", "60°", "90°", "180°"], respuestaCorrecta: "c" },
+      { titulo: "¿Cuál es el área de un cuadrado de lado 5?", opciones: ["10", "20", "25", "30"], respuestaCorrecta: "c" },
+      { titulo: "¿Cuántos lados tiene un triángulo?", opciones: ["2", "3", "4", "5"], respuestaCorrecta: "b" },
+      { titulo: "¿Cuánto suman los ángulos de un triángulo?", opciones: ["90°", "180°", "270°", "360°"], respuestaCorrecta: "b" },
     ],
     algebra: [
       { titulo: "Si 3x = 15, entonces x =", opciones: ["3", "4", "5", "6"], respuestaCorrecta: "c" },
+      { titulo: "¿Cuánto es 2x + 3 si x = 4?", opciones: ["9", "10", "11", "12"], respuestaCorrecta: "c" },
+      { titulo: "Si x - 5 = 10, ¿cuál es x?", opciones: ["5", "10", "15", "20"], respuestaCorrecta: "c" },
+      { titulo: "¿Cuánto es x² si x = 3?", opciones: ["6", "9", "12", "15"], respuestaCorrecta: "b" },
+      { titulo: "Si 2x = 20, ¿cuál es x?", opciones: ["5", "8", "10", "12"], respuestaCorrecta: "c" },
     ],
     trigonometria: [
       { titulo: "¿Cuál es el valor de sen(90°)?", opciones: ["0", "1", "-1", "1/2"], respuestaCorrecta: "b" },
+      { titulo: "¿Cuál es el valor de cos(0°)?", opciones: ["0", "1", "-1", "1/2"], respuestaCorrecta: "b" },
+      { titulo: "En un triángulo rectángulo, el lado más largo se llama:", opciones: ["Cateto", "Hipotenusa", "Base", "Altura"], respuestaCorrecta: "b" },
+      { titulo: "Si un triángulo tiene catetos 3 y 4, ¿cuál es su hipotenusa?", opciones: ["5", "6", "7", "8"], respuestaCorrecta: "a" },
+      { titulo: "¿Cuántos grados tiene un ángulo llano?", opciones: ["90°", "180°", "270°", "360°"], respuestaCorrecta: "b" },
     ],
     estadisticas: [
       { titulo: "¿Cuál es la media de: 2, 4, 6, 8?", opciones: ["4", "5", "6", "7"], respuestaCorrecta: "b" },
+      { titulo: "¿Cuál es la moda de: 2, 3, 3, 4, 5?", opciones: ["2", "3", "4", "5"], respuestaCorrecta: "b" },
+      { titulo: "¿Cuál es la mediana de: 1, 3, 5, 7, 9?", opciones: ["3", "5", "7", "9"], respuestaCorrecta: "b" },
+      { titulo: "Al lanzar un dado, ¿cuál es la probabilidad de sacar 6?", opciones: ["1/2", "1/3", "1/6", "1/12"], respuestaCorrecta: "c" },
+      { titulo: "¿Cuánto es el 25% de 80?", opciones: ["10", "15", "20", "25"], respuestaCorrecta: "c" },
     ],
     funciones: [
-      { titulo: "Si f(x)=2x+3, ¿cuál es f(5)?", opciones: ["10", "11", "13", "15"], respuestaCorrecta: "c" },
+      { titulo: "Si f(x) = 2x + 3, ¿cuál es f(5)?", opciones: ["10", "11", "13", "15"], respuestaCorrecta: "c" },
+      { titulo: "Si f(x) = x², ¿cuál es f(4)?", opciones: ["8", "12", "16", "20"], respuestaCorrecta: "c" },
+      { titulo: "En y = 3x + 2, ¿cuál es la pendiente?", opciones: ["1", "2", "3", "5"], respuestaCorrecta: "c" },
+      { titulo: "Si f(x) = 5, ¿cuál es f(100)?", opciones: ["0", "5", "100", "500"], respuestaCorrecta: "b" },
+      { titulo: "En y = 2x + 7, ¿cuál es la ordenada al origen?", opciones: ["2", "7", "9", "14"], respuestaCorrecta: "b" },
     ],
   };
 
-  return example[currentCategory] || example.algebra;
+  return examples[currentCategory] || examples.algebra;
 }
 
 function loadQuestion() {
@@ -440,6 +482,8 @@ function loadQuestion() {
     console.error("Pregunta inválida:", question);
     return;
   }
+
+  console.log(`❓ Pregunta ${currentQuestionIndex + 1}:`, question.titulo);
 
   // Progress
   const progress = document.getElementById("questionProgress");
@@ -541,13 +585,20 @@ function selectAnswer(e) {
   const question = currentQuestions[currentQuestionIndex];
   const correct = question.respuestaCorrecta;
 
+  console.log(`📝 Respuesta seleccionada: ${selected.toUpperCase()}, Correcta: ${correct.toUpperCase()}`);
+
   document.querySelectorAll(".option-btn").forEach((b) => (b.disabled = true));
 
   const correctBtn = document.querySelector(`.option-btn[data-option="${correct}"]`);
   if (correctBtn) correctBtn.classList.add("correct");
 
-  if (selected === correct) score++;
-  else btn.classList.add("incorrect");
+  if (selected === correct) {
+    console.log('✅ Respuesta CORRECTA');
+    score++;
+  } else {
+    console.log('❌ Respuesta INCORRECTA');
+    btn.classList.add("incorrect");
+  }
 
   setTimeout(() => nextQuestion(), 1200);
 }
@@ -555,6 +606,8 @@ function selectAnswer(e) {
 function handleTimeUp() {
   if (isAnswerSelected) return;
   isAnswerSelected = true;
+
+  console.log('⏰ Tiempo agotado');
 
   const question = currentQuestions[currentQuestionIndex];
   const correct = question.respuestaCorrecta;
@@ -568,8 +621,11 @@ function handleTimeUp() {
 
 function nextQuestion() {
   currentQuestionIndex++;
-  if (currentQuestionIndex < currentQuestions.length) loadQuestion();
-  else showResults();
+  if (currentQuestionIndex < currentQuestions.length) {
+    loadQuestion();
+  } else {
+    showResults();
+  }
 }
 
 /* =========================================================
@@ -600,6 +656,8 @@ function showResults() {
   const percentage = Math.round((score / currentQuestions.length) * 100);
   const sessionEndTime = new Date();
   const duration = Math.round((sessionEndTime - sessionStartTime) / 1000 / 60);
+
+  console.log(`🏁 Resultados: ${score}/${currentQuestions.length} (${percentage}%)`);
 
   const sessionData = {
     usuarioId: currentUser?.id,
@@ -660,6 +718,8 @@ function playAgain() {
 function backToGame() { playAgain(); }
 
 function logout() {
+  console.log('👋 Cerrando sesión...');
+  
   currentUser = null;
   currentDifficulty = "";
   currentCategory = "";
@@ -669,6 +729,7 @@ function logout() {
 
   localStorage.removeItem("token");
   localStorage.removeItem("userRole");
+  localStorage.removeItem("currentUser");
 
   const wheel = document.getElementById("wheel");
   if (wheel) wheel.style.transform = "rotate(0deg)";
@@ -684,12 +745,11 @@ function logout() {
 }
 
 /* =========================================================
-   LOGOUT ESTUDIANTE (sin duplicar Arduino!)
+   LOGOUT ESTUDIANTE
 ========================================================= */
 function activarLogoutEstudiante() {
   const btn = document.getElementById("logoutBtn");
   if (!btn) return;
-  // evita múltiples listeners
   btn.onclick = () => {
     localStorage.clear();
     sessionStorage.clear();
@@ -698,11 +758,9 @@ function activarLogoutEstudiante() {
 }
 
 /* =========================================================
-   SOCKET.IO + ARDUINO (CORREGIDO)
+   SOCKET.IO + ARDUINO
 ========================================================= */
 let socket = null;
-
-// opción seleccionada SOLO preselección
 let selectedOption = "a";
 
 function isQuestionScreenActive() {
@@ -715,15 +773,13 @@ function highlightOption(letter) {
   all.forEach((b) => b.classList.remove("selected-arduino"));
 
   const target = document.querySelector(`.option-btn[data-option="${letter}"]`);
-  console.log("🎯 Resaltando:", letter, "=>", target);
-
+  
   if (target) {
     target.classList.add("selected-arduino");
     selectedOption = letter;
   }
 }
 
-// Joystick: mover A-B-C-D con wrap
 function moveSelection(step) {
   const order = ["a", "b", "c", "d"];
   let idx = order.indexOf(selectedOption);
@@ -733,14 +789,16 @@ function moveSelection(step) {
   highlightOption(order[idx]);
 }
 
-// Click del joystick: recién aquí confirma
 function confirmSelectedOption() {
   const btn = document.querySelector(`.option-btn[data-option="${selectedOption}"]`);
-  if (btn && !btn.disabled) btn.click();
+  if (btn && !btn.disabled) {
+    console.log(`🎮 Confirmando opción: ${selectedOption.toUpperCase()}`);
+    btn.click();
+  }
 }
 
 function initSocket() {
-  socket = io(); // mismo host/puerto donde está servido el frontend
+  socket = io();
 
   socket.on("connect", () => console.log("✅ Socket conectado:", socket.id));
   socket.on("disconnect", () => console.log("❌ Socket desconectado"));
@@ -770,28 +828,25 @@ function initSocket() {
     }
 
     if (data.type === "preset") {
-      // botones físicos: SOLO preselección
       highlightOption(data.value);
       return;
     }
 
     if (data.type === "click") {
-      // joystick SW: confirma
       confirmSelectedOption();
     }
   });
 }
 
 /* =========================================================
-   CSS DINÁMICO para que se VEA el resaltado
-   (si ya lo pusiste en styles.css puedes borrar este bloque)
+   CSS DINÁMICO Arduino
 ========================================================= */
 function injectArduinoFocusCSS() {
   if (document.getElementById("arduino-focus-css")) return;
   const style = document.createElement("style");
   style.id = "arduino-focus-css";
   style.textContent = `
-    .option-btn.selected-arduino{
+    .option-btn.selected-arduino {
       outline: 3px solid rgba(255,255,255,.95);
       box-shadow: 0 0 0 4px rgba(99,102,241,.55);
       transform: translateY(-2px);
@@ -804,6 +859,8 @@ function injectArduinoFocusCSS() {
    EVENTOS DOM
 ========================================================= */
 function initializeApp() {
+  console.log('🚀 Inicializando aplicación...');
+  
   // Main
   document.getElementById("loginBtn")?.addEventListener("click", showLoginModal);
   document.getElementById("registerBtn")?.addEventListener("click", showRegisterScreen);
@@ -821,41 +878,39 @@ function initializeApp() {
   document.getElementById("playAgainBtn")?.addEventListener("click", playAgain);
   document.getElementById("backToGameBtn")?.addEventListener("click", backToGame);
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
-  document.getElementById("teacherLogoutBtn")?.addEventListener("click", logout);
 
   // Options
   document.querySelectorAll(".option-btn").forEach((btn) => btn.addEventListener("click", selectAnswer));
 
-  // click afuera del modal
+  // Click fuera del modal
   window.addEventListener("click", (event) => {
     const loginModal = document.getElementById("loginModal");
     if (event.target === loginModal || event.target.classList.contains("modal-overlay")) {
       hideLoginModal();
     }
   });
+  
+  console.log('✅ Aplicación inicializada');
 }
 
 async function testDatabaseConnection() {
   try {
     const response = await fetch(`${API_BASE_URL}/test`);
-    if (response.ok) console.log("✅ API OK");
-    else console.log("❌ API error");
+    if (response.ok) {
+      console.log("✅ Conexión con API establecida");
+    } else {
+      console.warn("⚠️ API respondió con error");
+    }
   } catch (e) {
-    console.log("❌ API no responde");
+    console.error("❌ No se pudo conectar con la API");
   }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  console.log('📱 DOM cargado');
   injectArduinoFocusCSS();
   initializeApp();
   initParticles();
   initSocket();
   testDatabaseConnection();
 });
-
-/* =========================================================
-   NOTA:
-   Si tienes dashboard docente gigante, pégalo aquí abajo.
-   PERO: NO vuelvas a declarar `socket`, `selectedOption`,
-   ni `initSocket`, ni `highlightOption`.
-========================================================= */
