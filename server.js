@@ -21,8 +21,6 @@ const { SerialPort } = require("serialport")
 const { ReadlineParser } = require("@serialport/parser-readline")
 
 const app = express()
-
-// ✅ Crear servidor HTTP (necesario para Socket.IO)
 const server = http.createServer(app)
 
 // ✅ Socket.IO server
@@ -41,11 +39,13 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Carpeta pública: usar 'public' dentro del backend (más fácil de empaquetar)
+// Carpeta pública
 const staticDir = path.join(__dirname, "public")
 app.use(express.static(staticDir))
 
-// Rutas de la API
+// ============================
+// RUTAS API
+// ============================
 app.use("/api/users", userRoutes)
 app.use("/api/cursos", cursoRoutes)
 app.use("/api/questions", questionRoutes)
@@ -57,20 +57,24 @@ app.get("/api/test", (req, res) => {
   res.json({ mensaje: "API funcionando correctamente" })
 })
 
-// Para cualquier ruta no API, servir el frontend
-app.get(/^\/(?!api).*/, (req, res) => {
+// ============================
+// RUTA PRINCIPAL FRONTEND
+// ============================
+app.get("/", (req, res) => {
   res.sendFile(path.join(staticDir, "index.html"))
 })
 
-// Middleware de errores
+// ============================
+// MANEJO DE ERRORES
+// ============================
 app.use((err, req, res, next) => {
   console.error(err.stack)
   res.status(500).json({ mensaje: "Error interno del servidor" })
 })
 
-/* ============================
-   ✅ SOCKET.IO: Conexiones WEB
-============================ */
+// ============================
+// SOCKET.IO
+// ============================
 io.on("connection", (socket) => {
   console.log("✅ Web conectada por Socket.IO:", socket.id)
 
@@ -79,13 +83,9 @@ io.on("connection", (socket) => {
   })
 })
 
-/* ============================
-   ✅ SERIAL: Arduino -> Socket
-   Formato esperado:
-   NAV:UP / NAV:DOWN / NAV:LEFT / NAV:RIGHT
-   PRESET:A / PRESET:B / PRESET:C / PRESET:D
-   CLICK:SW
-============================ */
+// ============================
+// SERIAL ARDUINO
+// ============================
 function initArduinoSerial() {
   const SERIAL_PORT = process.env.SERIAL_PORT || "COM3"
   const SERIAL_BAUD = parseInt(process.env.SERIAL_BAUD || "9600", 10)
@@ -110,7 +110,6 @@ function initArduinoSerial() {
 
       console.log("📟 Arduino:", msg)
 
-      // NAV
       if (msg.startsWith("NAV:")) {
         const dir = msg.split(":")[1]?.toLowerCase()
         if (["up", "down", "left", "right"].includes(dir)) {
@@ -119,22 +118,19 @@ function initArduinoSerial() {
         return
       }
 
-      // PRESET
       if (msg.startsWith("PRESET:")) {
-        const opt = msg.split(":")[1]?.toLowerCase() // a b c d
+        const opt = msg.split(":")[1]?.toLowerCase()
         if (["a", "b", "c", "d"].includes(opt)) {
           io.emit("arduino:event", { type: "preset", value: opt })
         }
         return
       }
 
-      // CLICK
       if (msg.startsWith("CLICK:")) {
         io.emit("arduino:event", { type: "click", value: "sw" })
         return
       }
 
-      // (Opcional) otros mensajes
       io.emit("arduino:event", { type: "raw", value: msg })
     })
   } catch (e) {
@@ -142,17 +138,17 @@ function initArduinoSerial() {
   }
 }
 
-// ✅ Inicializar Serial al arrancar (solo si SERIAL_PORT está configurado)
+// Inicializar Serial solo si está configurado
 if (process.env.SERIAL_PORT && process.env.SERIAL_PORT !== "NONE") {
   initArduinoSerial()
 } else {
-  console.log("⚠️ Serial deshabilitado: env var SERIAL_PORT no configurada o establecida como 'NONE'")
+  console.log("⚠️ Serial deshabilitado")
 }
 
-/* ============================
-   ✅ INICIAR SERVIDOR
-============================ */
+// ============================
+// INICIAR SERVIDOR
+// ============================
 const PORT = process.env.PORT || 5000
-server.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`)
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Servidor escuchando en puerto ${PORT}`)
 })
