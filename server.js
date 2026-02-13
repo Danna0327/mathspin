@@ -1,49 +1,82 @@
-require("dotenv").config()
-const express = require("express")
-const cors = require("cors")
-const path = require("path")
-const http = require("http")
-const mongoose = require("mongoose")
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+const http = require("http");
+const { Server } = require("socket.io");
 
-const app = express()
-const server = http.createServer(app)
+const connectDB = require("./config/db");
 
-// =====================
-// 🔌 CONEXIÓN MONGODB
-// =====================
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Conexión a MongoDB exitosa"))
-  .catch((err) => console.error("❌ Error MongoDB:", err))
+// Rutas
+const userRoutes = require("./routes/user.routes");
+const cursoRoutes = require("./routes/curso.routes");
+const questionRoutes = require("./routes/question.routes");
+const sessionRoutes = require("./routes/session.routes");
+const gameRoutes = require("./routes/game.routes");
 
-// =====================
-// 🛠 MIDDLEWARES
-// =====================
-app.use(cors())
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+const app = express();
+const server = http.createServer(app);
 
-// =====================
-// 📂 SERVIR FRONTEND
-// =====================
-const staticDir = path.join(__dirname, "public")
-app.use(express.static(staticDir))
+// ✅ IMPORTANTE PARA RAILWAY
+app.set("trust proxy", 1);
 
-// 🔥 RUTA PRINCIPAL (CLAVE PARA RAILWAY)
-app.get("/", (req, res) => {
-  res.sendFile(path.join(staticDir, "index.html"))
-})
+// Middlewares
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Ruta test
+// ================================
+// 🔥 CONECTAR MONGODB
+// ================================
+connectDB();
+
+// ================================
+// 🔥 RUTAS API
+// ================================
+app.use("/api/users", userRoutes);
+app.use("/api/cursos", cursoRoutes);
+app.use("/api/questions", questionRoutes);
+app.use("/api/sessions", sessionRoutes);
+app.use("/api/game", gameRoutes);
+
 app.get("/api/test", (req, res) => {
-  res.json({ mensaje: "API funcionando correctamente" })
-})
+  res.json({ mensaje: "API funcionando correctamente 🚀" });
+});
 
-// =====================
-// 🚀 INICIAR SERVIDOR
-// =====================
-const PORT = process.env.PORT || 8080
+// ================================
+// 🔥 SOCKET.IO
+// ================================
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("✅ Socket conectado:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("❌ Socket desconectado");
+  });
+});
+
+// ================================
+// 🔥 SERVIR FRONTEND
+// ================================
+const staticDir = path.join(__dirname, "public");
+app.use(express.static(staticDir));
+
+// IMPORTANTE: ESTA RUTA VA AL FINAL
+app.get("*", (req, res) => {
+  res.sendFile(path.join(staticDir, "index.html"));
+});
+
+// ================================
+// 🔥 INICIAR SERVIDOR
+// ================================
+const PORT = process.env.PORT || 8080;
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`)
-})
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+});
+
