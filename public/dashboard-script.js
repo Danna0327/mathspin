@@ -1,4 +1,3 @@
-import { Chart } from "@/components/ui/chart"
 // Variables globales
 let currentUser = null
 let currentCourse = null
@@ -6,9 +5,16 @@ let courses = []
 let questions = []
 const students = []
 
-// Configuración de la API
-const API_BASE = "http://localhost:5000/api"
-const API_BASE_URL = "http://localhost:5000/api";
+// Configuración de la API - Detecta automáticamente si es local o Railway
+const API_BASE = window.location.hostname === 'localhost' 
+  ? "http://localhost:5000/api"
+  : `${window.location.origin}/api`;
+
+const API_BASE_URL = window.location.hostname === 'localhost'
+  ? "http://localhost:5000/api"
+  : `${window.location.origin}/api`;
+
+console.log('🔍 Dashboard API URL:', API_BASE_URL);
 
 // Inicialización
 document.addEventListener("DOMContentLoaded", () => {
@@ -22,7 +28,7 @@ async function initializeDashboard() {
     // Verificar autenticación
     const token = localStorage.getItem("token")
     if (!token) {
-      window.location.href = "login.html"
+      window.location.href = "/"
       return
     }
 
@@ -43,7 +49,7 @@ async function initializeDashboard() {
 // Cargar datos del usuario
 async function loadUserData() {
   try {
-    const response = await fetch(`${API_BASE}/users/perfil`, {
+    const response = await fetch(`${API_BASE}/users/me`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
@@ -51,14 +57,17 @@ async function loadUserData() {
 
     if (response.ok) {
       currentUser = await response.json()
-      document.getElementById("nombreDocente").textContent = currentUser.nombre
+      const nombreElemento = document.getElementById("nombreDocente")
+      if (nombreElemento) {
+        nombreElemento.textContent = currentUser.nombre || currentUser.nombreUsuario
+      }
     } else {
       throw new Error("Error al cargar datos del usuario")
     }
   } catch (error) {
     console.error("Error:", error)
     localStorage.removeItem("token")
-    window.location.href = "login.html"
+    window.location.href = "/"
   }
 }
 
@@ -85,12 +94,14 @@ async function loadCourses() {
 // Actualizar selector de cursos
 function updateCourseSelector() {
   const selector = document.getElementById("cursoSelect")
+  if (!selector) return
+  
   selector.innerHTML = '<option value="">Seleccionar curso...</option>'
 
   courses.forEach((course) => {
     const option = document.createElement("option")
     option.value = course._id
-    option.textContent = `${course.nombre} - ${course.paralelo} (${course.codigo})`
+    option.textContent = `${course.nombreCurso} - ${course.codigoCurso}`
     selector.appendChild(option)
   })
 }
@@ -98,33 +109,82 @@ function updateCourseSelector() {
 // Configurar event listeners
 function setupEventListeners() {
   // Selector de curso
-  document.getElementById("cursoSelect").addEventListener("change", handleCourseChange)
+  const cursoSelect = document.getElementById("cursoSelect")
+  if (cursoSelect) {
+    cursoSelect.addEventListener("change", handleCourseChange)
+  }
 
   // Botones principales
-  document.getElementById("crearCursoBtn").addEventListener("click", () => openModal("modalCrearCurso"))
-  document.getElementById("nuevoCursoBtn").addEventListener("click", () => openModal("modalCrearCurso"))
-  document.getElementById("nuevaPreguntaBtn").addEventListener("click", () => openModal("modalPregunta"))
-  document.getElementById("invitarEstudianteBtn").addEventListener("click", showInviteModal)
-  document.getElementById("logoutBtn").addEventListener("click", logout)
+  const crearCursoBtn = document.getElementById("crearCursoBtn")
+  if (crearCursoBtn) {
+    crearCursoBtn.addEventListener("click", () => openModal("modalCrearCurso"))
+  }
+
+  const nuevoCursoBtn = document.getElementById("nuevoCursoBtn")
+  if (nuevoCursoBtn) {
+    nuevoCursoBtn.addEventListener("click", () => openModal("modalCrearCurso"))
+  }
+
+  const nuevaPreguntaBtn = document.getElementById("nuevaPreguntaBtn")
+  if (nuevaPreguntaBtn) {
+    nuevaPreguntaBtn.addEventListener("click", () => openModal("modalPregunta"))
+  }
+
+  const invitarEstudianteBtn = document.getElementById("invitarEstudianteBtn")
+  if (invitarEstudianteBtn) {
+    invitarEstudianteBtn.addEventListener("click", showInviteModal)
+  }
+
+  const logoutBtn = document.getElementById("logoutBtn")
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", logout)
+  }
 
   // Formularios
-  document.getElementById("formCrearCurso").addEventListener("submit", handleCreateCourse)
-  document.getElementById("formPregunta").addEventListener("submit", handleSaveQuestion)
+  const formCrearCurso = document.getElementById("formCrearCurso")
+  if (formCrearCurso) {
+    formCrearCurso.addEventListener("submit", handleCreateCourse)
+  }
+
+  const formPregunta = document.getElementById("formPregunta")
+  if (formPregunta) {
+    formPregunta.addEventListener("submit", handleSaveQuestion)
+  }
 
   // Filtros
-  document.getElementById("periodoSelect").addEventListener("change", loadAnalytics)
-  document.getElementById("categoriaFiltro").addEventListener("change", loadQuestions)
-  document.getElementById("dificultadFiltro").addEventListener("change", loadQuestions)
-  document.getElementById("busquedaInput").addEventListener("input", debounce(loadQuestions, 300))
+  const periodoSelect = document.getElementById("periodoSelect")
+  if (periodoSelect) {
+    periodoSelect.addEventListener("change", loadAnalytics)
+  }
+
+  const categoriaFiltro = document.getElementById("categoriaFiltro")
+  if (categoriaFiltro) {
+    categoriaFiltro.addEventListener("change", loadQuestions)
+  }
+
+  const dificultadFiltro = document.getElementById("dificultadFiltro")
+  if (dificultadFiltro) {
+    dificultadFiltro.addEventListener("change", loadQuestions)
+  }
+
+  const busquedaInput = document.getElementById("busquedaInput")
+  if (busquedaInput) {
+    busquedaInput.addEventListener("input", debounce(loadQuestions, 300))
+  }
 
   // Copiar código
-  document.getElementById("copiarCodigoBtn").addEventListener("click", copyCode)
+  const copiarCodigoBtn = document.getElementById("copiarCodigoBtn")
+  if (copiarCodigoBtn) {
+    copiarCodigoBtn.addEventListener("click", copyCode)
+  }
 
   // Cerrar modales
   document.querySelectorAll(".close").forEach((closeBtn) => {
     closeBtn.addEventListener("click", (e) => {
       const modal = e.target.closest(".modal")
-      closeModal(modal.id)
+      if (modal) {
+        closeModal(modal.id)
+      }
     })
   })
 
@@ -191,10 +251,12 @@ async function handleCourseChange(e) {
     currentCourse = courses.find((c) => c._id === courseId)
 
     // Cargar datos del curso actual
-    const activeTab = document.querySelector(".tab-btn.active").dataset.tab
-    await loadTabData(activeTab)
+    const activeTab = document.querySelector(".tab-btn.active")
+    if (activeTab) {
+      await loadTabData(activeTab.dataset.tab)
+    }
 
-    showNotification(`Curso ${currentCourse.nombre} seleccionado`, "success")
+    showNotification(`Curso ${currentCourse.nombreCurso} seleccionado`, "success")
   } else {
     currentCourse = null
     clearDashboard()
@@ -204,16 +266,26 @@ async function handleCourseChange(e) {
 // Limpiar dashboard
 function clearDashboard() {
   // Limpiar KPIs
-  document.getElementById("totalEstudiantes").textContent = "0"
-  document.getElementById("totalSesiones").textContent = "0"
-  document.getElementById("promedioGeneral").textContent = "0%"
-  document.getElementById("tiempoPromedio").textContent = "0min"
+  const totalEstudiantes = document.getElementById("totalEstudiantes")
+  const totalSesiones = document.getElementById("totalSesiones")
+  const promedioGeneral = document.getElementById("promedioGeneral")
+  const tiempoPromedio = document.getElementById("tiempoPromedio")
+
+  if (totalEstudiantes) totalEstudiantes.textContent = "0"
+  if (totalSesiones) totalSesiones.textContent = "0"
+  if (promedioGeneral) promedioGeneral.textContent = "0%"
+  if (tiempoPromedio) tiempoPromedio.textContent = "0min"
 
   // Limpiar grids
-  document.getElementById("estudiantesGrid").innerHTML =
-    '<p style="color: white; text-align: center;">Selecciona un curso para ver los estudiantes</p>'
-  document.getElementById("preguntasGrid").innerHTML =
-    '<p style="color: white; text-align: center;">Selecciona un curso para gestionar preguntas</p>'
+  const estudiantesGrid = document.getElementById("estudiantesGrid")
+  const preguntasGrid = document.getElementById("preguntasGrid")
+
+  if (estudiantesGrid) {
+    estudiantesGrid.innerHTML = '<p style="color: white; text-align: center;">Selecciona un curso para ver los estudiantes</p>'
+  }
+  if (preguntasGrid) {
+    preguntasGrid.innerHTML = '<p style="color: white; text-align: center;">Selecciona un curso para gestionar preguntas</p>'
+  }
 }
 
 // Cargar analytics
@@ -221,7 +293,7 @@ async function loadAnalytics() {
   if (!currentCourse) return
 
   try {
-    const periodo = document.getElementById("periodoSelect").value
+    const periodo = document.getElementById("periodoSelect")?.value || "semana"
     const response = await fetch(`${API_BASE}/cursos/${currentCourse._id}/analytics?periodo=${periodo}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -241,24 +313,38 @@ async function loadAnalytics() {
 // Actualizar analytics en la interfaz
 function updateAnalytics(data) {
   // Actualizar KPIs
-  document.getElementById("totalEstudiantes").textContent = data.kpis.totalEstudiantes
-  document.getElementById("totalSesiones").textContent = data.kpis.totalSesiones
-  document.getElementById("promedioGeneral").textContent = `${Math.round(data.kpis.promedioGeneral)}%`
-  document.getElementById("tiempoPromedio").textContent = `${Math.round(data.kpis.tiempoPromedio / 60)}min`
+  const totalEstudiantes = document.getElementById("totalEstudiantes")
+  const totalSesiones = document.getElementById("totalSesiones")
+  const promedioGeneral = document.getElementById("promedioGeneral")
+  const tiempoPromedio = document.getElementById("tiempoPromedio")
+
+  if (totalEstudiantes && data.kpis) totalEstudiantes.textContent = data.kpis.totalEstudiantes || 0
+  if (totalSesiones && data.kpis) totalSesiones.textContent = data.kpis.totalSesiones || 0
+  if (promedioGeneral && data.kpis) promedioGeneral.textContent = `${Math.round(data.kpis.promedioGeneral || 0)}%`
+  if (tiempoPromedio && data.kpis) tiempoPromedio.textContent = `${Math.round((data.kpis.tiempoPromedio || 0) / 60)}min`
 
   // Actualizar gráfico de categorías
-  updateCategoryChart(data.estadisticasPorCategoria)
+  if (data.estadisticasPorCategoria) {
+    updateCategoryChart(data.estadisticasPorCategoria)
+  }
 
   // Actualizar ranking
-  updateRanking(data.topEstudiantes)
+  if (data.topEstudiantes) {
+    updateRanking(data.topEstudiantes)
+  }
 
   // Actualizar tabla de sesiones
-  updateSessionsTable(data.sesionesRecientes)
+  if (data.sesionesRecientes) {
+    updateSessionsTable(data.sesionesRecientes)
+  }
 }
 
 // Actualizar gráfico de categorías
 function updateCategoryChart(data) {
-  const ctx = document.getElementById("categoriaChart").getContext("2d")
+  const ctx = document.getElementById("categoriaChart")
+  if (!ctx) return
+
+  const context = ctx.getContext("2d")
 
   // Destruir gráfico anterior si existe
   if (window.categoryChart) {
@@ -266,71 +352,75 @@ function updateCategoryChart(data) {
   }
 
   const labels = Object.keys(data).map((cat) => cat.charAt(0).toUpperCase() + cat.slice(1))
-  const scores = Object.values(data).map((cat) => cat.promedioScore)
+  const scores = Object.values(data).map((cat) => cat.promedioScore || 0)
 
-  window.categoryChart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: "Promedio de Puntuación",
-          data: scores,
-          backgroundColor: [
-            "rgba(102, 126, 234, 0.8)",
-            "rgba(118, 75, 162, 0.8)",
-            "rgba(56, 161, 105, 0.8)",
-            "rgba(237, 137, 54, 0.8)",
-            "rgba(229, 62, 62, 0.8)",
-          ],
-          borderColor: [
-            "rgba(102, 126, 234, 1)",
-            "rgba(118, 75, 162, 1)",
-            "rgba(56, 161, 105, 1)",
-            "rgba(237, 137, 54, 1)",
-            "rgba(229, 62, 62, 1)",
-          ],
-          borderWidth: 2,
-          borderRadius: 8,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false,
-        },
+  if (typeof Chart !== 'undefined') {
+    window.categoryChart = new Chart(context, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Promedio de Puntuación",
+            data: scores,
+            backgroundColor: [
+              "rgba(102, 126, 234, 0.8)",
+              "rgba(118, 75, 162, 0.8)",
+              "rgba(56, 161, 105, 0.8)",
+              "rgba(237, 137, 54, 0.8)",
+              "rgba(229, 62, 62, 0.8)",
+            ],
+            borderColor: [
+              "rgba(102, 126, 234, 1)",
+              "rgba(118, 75, 162, 1)",
+              "rgba(56, 161, 105, 1)",
+              "rgba(237, 137, 54, 1)",
+              "rgba(229, 62, 62, 1)",
+            ],
+            borderWidth: 2,
+            borderRadius: 8,
+          },
+        ],
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 100,
-          ticks: {
-            callback: (value) => value + "%",
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: (value) => value + "%",
+            },
           },
         },
       },
-    },
-  })
+    })
+  }
 }
 
 // Actualizar ranking
 function updateRanking(students) {
   const container = document.getElementById("topEstudiantes")
+  if (!container) return
+  
   container.innerHTML = ""
 
-  students.forEach((student) => {
+  students.forEach((student, index) => {
     const item = document.createElement("div")
     item.className = "ranking-item"
     item.innerHTML = `
-            <div class="ranking-position">${student.posicion}</div>
-            <div class="ranking-info">
-                <h4>${student.nombre}</h4>
-                <p>${student.promedio}% promedio • ${student.totalSesiones} sesiones</p>
-            </div>
-        `
+      <div class="ranking-position">${index + 1}</div>
+      <div class="ranking-info">
+        <h4>${student.nombre}</h4>
+        <p>${student.promedio}% promedio • ${student.totalSesiones} sesiones</p>
+      </div>
+    `
     container.appendChild(item)
   })
 }
@@ -338,17 +428,19 @@ function updateRanking(students) {
 // Actualizar tabla de sesiones
 function updateSessionsTable(sessions) {
   const tbody = document.querySelector("#sesionesTable tbody")
+  if (!tbody) return
+  
   tbody.innerHTML = ""
 
   sessions.forEach((session) => {
     const row = document.createElement("tr")
     row.innerHTML = `
-            <td>${session.estudiante}</td>
-            <td><span class="categoria-badge">${session.categoria}</span></td>
-            <td><span class="dificultad-badge ${session.dificultad}">${session.dificultad}</span></td>
-            <td>${session.puntuacion}%</td>
-            <td>${new Date(session.fecha).toLocaleDateString()}</td>
-        `
+      <td>${session.estudiante}</td>
+      <td><span class="categoria-badge">${session.categoria}</span></td>
+      <td><span class="dificultad-badge ${session.dificultad}">${session.dificultad}</span></td>
+      <td>${session.puntuacion}%</td>
+      <td>${new Date(session.fecha).toLocaleDateString()}</td>
+    `
     tbody.appendChild(row)
   })
 }
@@ -358,9 +450,11 @@ async function loadStudents() {
   if (!currentCourse) return
 
   const container = document.getElementById("estudiantesGrid")
+  if (!container) return
+  
   container.innerHTML = ""
 
-  if (currentCourse.estudiantes.length === 0) {
+  if (!currentCourse.estudiantes || currentCourse.estudiantes.length === 0) {
     container.innerHTML = '<p style="color: white; text-align: center;">No hay estudiantes en este curso</p>'
     return
   }
@@ -381,35 +475,35 @@ function createStudentCard(student) {
     .map((n) => n[0])
     .join("")
     .toUpperCase()
-  const lastConnection = new Date(student.ultimaConexion).toLocaleDateString()
+  const lastConnection = new Date(student.ultimaConexion || Date.now()).toLocaleDateString()
 
   card.innerHTML = `
-        <div class="estudiante-header">
-            <div class="estudiante-avatar">${initials}</div>
-            <div class="estudiante-info">
-                <h4>${student.nombre}</h4>
-                <p>Última conexión: ${lastConnection}</p>
-            </div>
-        </div>
-        <div class="estudiante-stats">
-            <div class="stat-item">
-                <div class="value">${student.estadisticas.totalSesiones}</div>
-                <div class="label">Sesiones</div>
-            </div>
-            <div class="stat-item">
-                <div class="value">${Math.round(student.estadisticas.promedioGeneral)}%</div>
-                <div class="label">Promedio</div>
-            </div>
-        </div>
-        <div class="estudiante-actions">
-            <button class="btn-primary btn-small" onclick="viewStudentHistory('${student._id}')">
-                <i class="fas fa-chart-line"></i> Historial
-            </button>
-            <button class="btn-secondary btn-small" onclick="removeStudent('${student._id}')">
-                <i class="fas fa-user-minus"></i> Remover
-            </button>
-        </div>
-    `
+    <div class="estudiante-header">
+      <div class="estudiante-avatar">${initials}</div>
+      <div class="estudiante-info">
+        <h4>${student.nombre}</h4>
+        <p>Última conexión: ${lastConnection}</p>
+      </div>
+    </div>
+    <div class="estudiante-stats">
+      <div class="stat-item">
+        <div class="value">${student.estadisticas?.totalSesiones || 0}</div>
+        <div class="label">Sesiones</div>
+      </div>
+      <div class="stat-item">
+        <div class="value">${Math.round(student.estadisticas?.promedioGeneral || 0)}%</div>
+        <div class="label">Promedio</div>
+      </div>
+    </div>
+    <div class="estudiante-actions">
+      <button class="btn-primary btn-small" onclick="viewStudentHistory('${student._id}')">
+        <i class="fas fa-chart-line"></i> Historial
+      </button>
+      <button class="btn-secondary btn-small" onclick="removeStudent('${student._id}')">
+        <i class="fas fa-user-minus"></i> Remover
+      </button>
+    </div>
+  `
 
   return card
 }
@@ -417,16 +511,16 @@ function createStudentCard(student) {
 // Cargar preguntas
 async function loadQuestions() {
   try {
-    const categoria = document.getElementById("categoriaFiltro").value
-    const dificultad = document.getElementById("dificultadFiltro").value
-    const busqueda = document.getElementById("busquedaInput").value
+    const categoria = document.getElementById("categoriaFiltro")?.value || "todas"
+    const dificultad = document.getElementById("dificultadFiltro")?.value || "todas"
+    const busqueda = document.getElementById("busquedaInput")?.value || ""
 
     const params = new URLSearchParams()
     if (categoria !== "todas") params.append("categoria", categoria)
     if (dificultad !== "todas") params.append("dificultad", dificultad)
     if (busqueda) params.append("busqueda", busqueda)
 
-    const response = await fetch(`${API_BASE}/questions/docente?${params}`, {
+    const response = await fetch(`${API_BASE}/questions?${params}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
@@ -445,6 +539,8 @@ async function loadQuestions() {
 // Actualizar grid de preguntas
 function updateQuestionsGrid() {
   const container = document.getElementById("preguntasGrid")
+  if (!container) return
+  
   container.innerHTML = ""
 
   if (questions.length === 0) {
@@ -464,33 +560,33 @@ function createQuestionCard(question) {
   card.className = "pregunta-card"
 
   card.innerHTML = `
-        <div class="pregunta-header">
-            <div class="pregunta-meta">
-                <span class="categoria-badge">${question.categoria}</span>
-                <span class="dificultad-badge ${question.dificultad}">${question.dificultad}</span>
-            </div>
-            <div class="pregunta-actions">
-                <button class="btn-primary btn-small" onclick="editQuestion('${question._id}')">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn-secondary btn-small" onclick="deleteQuestion('${question._id}')">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        </div>
-        <div class="pregunta-texto">${question.pregunta}</div>
-        <div class="pregunta-opciones">
-            ${question.opciones
-              .map(
-                (opcion, index) => `
-                <div class="opcion-item ${index === question.respuestaCorrecta ? "correcta" : ""}">
-                    ${String.fromCharCode(65 + index)}. ${opcion}
-                </div>
-            `,
-              )
-              .join("")}
-        </div>
-    `
+    <div class="pregunta-header">
+      <div class="pregunta-meta">
+        <span class="categoria-badge">${question.categoria}</span>
+        <span class="dificultad-badge ${question.dificultad}">${question.dificultad}</span>
+      </div>
+      <div class="pregunta-actions">
+        <button class="btn-primary btn-small" onclick="editQuestion('${question._id}')">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn-secondary btn-small" onclick="deleteQuestion('${question._id}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+    <div class="pregunta-texto">${question.pregunta || question.titulo}</div>
+    <div class="pregunta-opciones">
+      ${question.opciones
+        .map(
+          (opcion, index) => `
+          <div class="opcion-item ${index === question.respuestaCorrecta ? "correcta" : ""}">
+            ${String.fromCharCode(65 + index)}. ${opcion}
+          </div>
+        `,
+        )
+        .join("")}
+    </div>
+  `
 
   return card
 }
@@ -498,6 +594,8 @@ function createQuestionCard(question) {
 // Actualizar grid de cursos
 function updateCoursesGrid() {
   const container = document.getElementById("cursosGrid")
+  if (!container) return
+  
   container.innerHTML = ""
 
   if (courses.length === 0) {
@@ -517,35 +615,27 @@ function createCourseCard(course) {
   card.className = "curso-card"
 
   card.innerHTML = `
-        <div class="curso-header">
-            <div class="curso-info">
-                <h3>${course.nombre} - ${course.paralelo}</h3>
-                <span class="curso-codigo">${course.codigo}</span>
-            </div>
-        </div>
-        <div class="curso-stats">
-            <div class="curso-stat">
-                <div class="value">${course.estudiantes.length}</div>
-                <div class="label">Estudiantes</div>
-            </div>
-            <div class="curso-stat">
-                <div class="value">${course.nivel}</div>
-                <div class="label">Nivel</div>
-            </div>
-            <div class="curso-stat">
-                <div class="value">${course.año}</div>
-                <div class="label">Año</div>
-            </div>
-        </div>
-        <div class="curso-actions">
-            <button class="btn-primary btn-small" onclick="selectCourse('${course._id}')">
-                <i class="fas fa-eye"></i> Ver
-            </button>
-            <button class="btn-secondary btn-small" onclick="shareCourse('${course._id}')">
-                <i class="fas fa-share"></i> Compartir
-            </button>
-        </div>
-    `
+    <div class="curso-header">
+      <div class="curso-info">
+        <h3>${course.nombreCurso}</h3>
+        <span class="curso-codigo">${course.codigoCurso}</span>
+      </div>
+    </div>
+    <div class="curso-stats">
+      <div class="curso-stat">
+        <div class="value">${course.estudiantes?.length || 0}</div>
+        <div class="label">Estudiantes</div>
+      </div>
+    </div>
+    <div class="curso-actions">
+      <button class="btn-primary btn-small" onclick="selectCourse('${course._id}')">
+        <i class="fas fa-eye"></i> Ver
+      </button>
+      <button class="btn-secondary btn-small" onclick="shareCourse('${course._id}')">
+        <i class="fas fa-share"></i> Compartir
+      </button>
+    </div>
+  `
 
   return card
 }
@@ -556,13 +646,12 @@ async function handleCreateCourse(e) {
 
   const formData = new FormData(e.target)
   const courseData = {
-    nombre: formData.get("nombreCurso"),
-    nivel: formData.get("nivelCurso"),
-    paralelo: formData.get("paraleloCurso"),
+    nombreCurso: formData.get("nombreCurso"),
+    codigoCurso: generateCourseCode(),
   }
 
   try {
-    const response = await fetch(`${API_BASE}/cursos/crear`, {
+    const response = await fetch(`${API_BASE}/cursos`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -586,23 +675,38 @@ async function handleCreateCourse(e) {
   }
 }
 
+// Generar código de curso aleatorio
+function generateCourseCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let code = ''
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
 // Manejar guardado de pregunta
 async function handleSaveQuestion(e) {
   e.preventDefault()
 
   const formData = new FormData(e.target)
   const questionData = {
+    titulo: formData.get("tituloPregunta") || formData.get("textoPregunta"),
     pregunta: formData.get("textoPregunta"),
     categoria: formData.get("categoriaPregunta"),
     dificultad: formData.get("dificultadPregunta"),
-    opciones: [formData.get("opcion0"), formData.get("opcion1"), formData.get("opcion2"), formData.get("opcion3")],
-    respuestaCorrecta: Number.parseInt(formData.get("respuestaCorrecta")),
-    explicacion: formData.get("explicacionPregunta"),
+    opciones: [
+      formData.get("opcion0") || formData.get("opcionA"),
+      formData.get("opcion1") || formData.get("opcionB"),
+      formData.get("opcion2") || formData.get("opcionC"),
+      formData.get("opcion3") || formData.get("opcionD")
+    ],
+    respuestaCorrecta: formData.get("respuestaCorrecta"),
   }
 
   try {
     const questionId = e.target.dataset.questionId
-    const url = questionId ? `${API_BASE}/questions/${questionId}` : `${API_BASE}/questions/crear`
+    const url = questionId ? `${API_BASE}/questions/${questionId}` : `${API_BASE}/questions`
     const method = questionId ? "PUT" : "POST"
 
     const response = await fetch(url, {
@@ -635,20 +739,28 @@ async function editQuestion(questionId) {
   if (!question) return
 
   // Llenar formulario
-  document.getElementById("textoPregunta").value = question.pregunta
-  document.getElementById("categoriaPregunta").value = question.categoria
-  document.getElementById("dificultadPregunta").value = question.dificultad
-  document.getElementById("explicacionPregunta").value = question.explicacion || ""
+  const textoPregunta = document.getElementById("textoPregunta")
+  const categoriaPregunta = document.getElementById("categoriaPregunta")
+  const dificultadPregunta = document.getElementById("dificultadPregunta")
+
+  if (textoPregunta) textoPregunta.value = question.pregunta || question.titulo
+  if (categoriaPregunta) categoriaPregunta.value = question.categoria
+  if (dificultadPregunta) dificultadPregunta.value = question.dificultad
 
   question.opciones.forEach((opcion, index) => {
-    document.getElementById(`opcion${index}`).value = opcion
+    const opcionInput = document.getElementById(`opcion${index}`)
+    if (opcionInput) opcionInput.value = opcion
   })
 
-  document.querySelector(`input[name="respuestaCorrecta"][value="${question.respuestaCorrecta}"]`).checked = true
+  const respuestaInput = document.querySelector(`input[name="respuestaCorrecta"][value="${question.respuestaCorrecta}"]`)
+  if (respuestaInput) respuestaInput.checked = true
 
   // Configurar formulario para edición
-  document.getElementById("tituloModalPregunta").textContent = "Editar Pregunta"
-  document.getElementById("formPregunta").dataset.questionId = questionId
+  const tituloModal = document.getElementById("tituloModalPregunta")
+  if (tituloModal) tituloModal.textContent = "Editar Pregunta"
+  
+  const formPregunta = document.getElementById("formPregunta")
+  if (formPregunta) formPregunta.dataset.questionId = questionId
 
   openModal("modalPregunta")
 }
@@ -684,13 +796,19 @@ function showInviteModal() {
     return
   }
 
-  document.getElementById("codigoCurso").value = currentCourse.codigo
+  const codigoCursoInput = document.getElementById("codigoCurso")
+  if (codigoCursoInput) {
+    codigoCursoInput.value = currentCourse.codigoCurso
+  }
+  
   openModal("modalInvitar")
 }
 
 // Copiar código
 function copyCode() {
   const input = document.getElementById("codigoCurso")
+  if (!input) return
+  
   input.select()
   document.execCommand("copy")
   showNotification("Código copiado al portapapeles", "success")
@@ -698,18 +816,25 @@ function copyCode() {
 
 // Seleccionar curso
 function selectCourse(courseId) {
-  document.getElementById("cursoSelect").value = courseId
-  document.getElementById("cursoSelect").dispatchEvent(new Event("change"))
+  const cursoSelect = document.getElementById("cursoSelect")
+  if (!cursoSelect) return
+  
+  cursoSelect.value = courseId
+  cursoSelect.dispatchEvent(new Event("change"))
 
   // Cambiar a tab de analytics
-  document.querySelector('.tab-btn[data-tab="analytics"]').click()
+  const analyticsTab = document.querySelector('.tab-btn[data-tab="analytics"]')
+  if (analyticsTab) analyticsTab.click()
 }
 
 // Compartir curso
 function shareCourse(courseId) {
   const course = courses.find((c) => c._id === courseId)
   if (course) {
-    document.getElementById("codigoCurso").value = course.codigo
+    const codigoCursoInput = document.getElementById("codigoCurso")
+    if (codigoCursoInput) {
+      codigoCursoInput.value = course.codigoCurso
+    }
     openModal("modalInvitar")
   }
 }
@@ -741,39 +866,44 @@ async function removeStudent(studentId) {
 
 // Ver historial de estudiante
 function viewStudentHistory(studentId) {
-  // Implementar vista de historial
   showNotification("Función de historial en desarrollo", "info")
 }
 
 // Funciones de modal
 function openModal(modalId) {
-  document.getElementById(modalId).style.display = "block"
-  document.body.style.overflow = "hidden"
+  const modal = document.getElementById(modalId)
+  if (modal) {
+    modal.style.display = "block"
+    document.body.style.overflow = "hidden"
+  }
 }
 
 function closeModal(modalId) {
-  document.getElementById(modalId).style.display = "none"
-  document.body.style.overflow = "auto"
+  const modal = document.getElementById(modalId)
+  if (modal) {
+    modal.style.display = "none"
+    document.body.style.overflow = "auto"
 
-  // Limpiar formularios
-  const form = document.querySelector(`#${modalId} form`)
-  if (form) {
-    form.reset()
-    delete form.dataset.questionId
-  }
+    // Limpiar formularios
+    const form = modal.querySelector("form")
+    if (form) {
+      form.reset()
+      delete form.dataset.questionId
+    }
 
-  // Resetear título de modal de pregunta
-  if (modalId === "modalPregunta") {
-    document.getElementById("tituloModalPregunta").textContent = "Nueva Pregunta"
+    // Resetear título de modal de pregunta
+    if (modalId === "modalPregunta") {
+      const tituloModal = document.getElementById("tituloModalPregunta")
+      if (tituloModal) tituloModal.textContent = "Nueva Pregunta"
+    }
   }
 }
 
 // Logout
 function logout() {
   localStorage.removeItem("token")
-  localStorage.removeItem("userRole")
-  location.reload()
-  //window.location.href = "login.html" ESTO ESTABA ANTES
+  localStorage.removeItem("currentUser")
+  window.location.href = "/"
 }
 
 // Mostrar notificación
@@ -781,13 +911,19 @@ function showNotification(message, type = "success") {
   const notification = document.getElementById("notification")
   const text = document.getElementById("notificationText")
 
-  text.textContent = message
-  notification.className = `notification ${type}`
-  notification.classList.add("show")
+  if (notification && text) {
+    text.textContent = message
+    notification.className = `notification ${type}`
+    notification.classList.add("show")
 
-  setTimeout(() => {
-    notification.classList.remove("show")
-  }, 3000)
+    setTimeout(() => {
+      notification.classList.remove("show")
+    }, 3000)
+  } else {
+    // Fallback si no existe el elemento de notificación
+    console.log(`[${type.toUpperCase()}] ${message}`)
+    alert(message)
+  }
 }
 
 // Función debounce para búsqueda
