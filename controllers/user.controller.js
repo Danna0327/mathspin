@@ -1,6 +1,6 @@
 const Usuario = require("../models/user.model");
 const Curso = require("../models/curso.model");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const SECRET = process.env.JWT_SECRET || "clave_secreta_super_segura";
