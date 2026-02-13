@@ -6,24 +6,29 @@ const http = require("http")
 
 const connectDB = require("./config/db")
 
-// Importar rutas
+// =============================
+// IMPORTAR RUTAS
+// =============================
 const userRoutes = require("./routes/user.routes")
 const cursoRoutes = require("./routes/curso.routes")
 const questionRoutes = require("./routes/question.routes")
 const sessionRoutes = require("./routes/session.routes")
 const gameRoutes = require("./routes/game.routes")
 
-// ✅ Socket.IO
+// =============================
+// SOCKET.IO
+// =============================
 const { Server } = require("socket.io")
 
-// ✅ Serial Arduino
+// =============================
+// SERIAL (ARDUINO)
+// =============================
 const { SerialPort } = require("serialport")
 const { ReadlineParser } = require("@serialport/parser-readline")
 
 const app = express()
 const server = http.createServer(app)
 
-// ✅ Socket.IO server
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -31,21 +36,32 @@ const io = new Server(server, {
   },
 })
 
-// Conectar a la base de datos
+// =============================
+// CONECTAR A MONGODB
+// =============================
 connectDB()
 
-// Middlewares
+// =============================
+// MIDDLEWARES
+// =============================
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Carpeta pública
+// =============================
+// SERVIR FRONTEND (CARPETA PUBLIC)
+// =============================
 const staticDir = path.join(__dirname, "public")
+
 app.use(express.static(staticDir))
 
-// ============================
+app.get("/", (req, res) => {
+  res.sendFile(path.join(staticDir, "index.html"))
+})
+
+// =============================
 // RUTAS API
-// ============================
+// =============================
 app.use("/api/users", userRoutes)
 app.use("/api/cursos", cursoRoutes)
 app.use("/api/questions", questionRoutes)
@@ -57,51 +73,41 @@ app.get("/api/test", (req, res) => {
   res.json({ mensaje: "API funcionando correctamente" })
 })
 
-// ============================
-// RUTA PRINCIPAL FRONTEND
-// ============================
-app.get("/", (req, res) => {
-  res.sendFile(path.join(staticDir, "index.html"))
-})
-
-// ============================
-// MANEJO DE ERRORES
-// ============================
-app.use((err, req, res, next) => {
-  console.error(err.stack)
-  res.status(500).json({ mensaje: "Error interno del servidor" })
-})
-
-// ============================
-// SOCKET.IO
-// ============================
+// =============================
+// SOCKET.IO CONEXIONES WEB
+// =============================
 io.on("connection", (socket) => {
-  console.log("✅ Web conectada por Socket.IO:", socket.id)
+  console.log("✅ Web conectada:", socket.id)
 
   socket.on("disconnect", () => {
     console.log("❌ Web desconectada:", socket.id)
   })
 })
 
-// ============================
-// SERIAL ARDUINO
-// ============================
+// =============================
+// SERIAL ARDUINO (OPCIONAL)
+// =============================
 function initArduinoSerial() {
-  const SERIAL_PORT = process.env.SERIAL_PORT || "COM3"
+  const SERIAL_PORT = process.env.SERIAL_PORT
   const SERIAL_BAUD = parseInt(process.env.SERIAL_BAUD || "9600", 10)
 
-  console.log(`🔌 Intentando conectar Arduino en ${SERIAL_PORT} @ ${SERIAL_BAUD}...`)
+  if (!SERIAL_PORT || SERIAL_PORT === "NONE") {
+    console.log("⚠️ Serial deshabilitado")
+    return
+  }
+
+  console.log(`🔌 Conectando Arduino en ${SERIAL_PORT} @ ${SERIAL_BAUD}`)
 
   try {
     const port = new SerialPort({ path: SERIAL_PORT, baudRate: SERIAL_BAUD })
     const parser = port.pipe(new ReadlineParser({ delimiter: "\n" }))
 
     port.on("open", () => {
-      console.log("✅ Arduino conectado por Serial:", SERIAL_PORT)
+      console.log("✅ Arduino conectado:", SERIAL_PORT)
     })
 
     port.on("error", (err) => {
-      console.error("❌ Error SerialPort:", err.message)
+      console.error("❌ Error Serial:", err.message)
     })
 
     parser.on("data", (line) => {
@@ -112,17 +118,13 @@ function initArduinoSerial() {
 
       if (msg.startsWith("NAV:")) {
         const dir = msg.split(":")[1]?.toLowerCase()
-        if (["up", "down", "left", "right"].includes(dir)) {
-          io.emit("arduino:event", { type: "nav", value: dir })
-        }
+        io.emit("arduino:event", { type: "nav", value: dir })
         return
       }
 
       if (msg.startsWith("PRESET:")) {
         const opt = msg.split(":")[1]?.toLowerCase()
-        if (["a", "b", "c", "d"].includes(opt)) {
-          io.emit("arduino:event", { type: "preset", value: opt })
-        }
+        io.emit("arduino:event", { type: "preset", value: opt })
         return
       }
 
@@ -134,21 +136,31 @@ function initArduinoSerial() {
       io.emit("arduino:event", { type: "raw", value: msg })
     })
   } catch (e) {
-    console.error("❌ No se pudo inicializar Serial:", e.message)
+    console.error("❌ No se pudo iniciar Serial:", e.message)
   }
 }
 
-// Inicializar Serial solo si está configurado
-if (process.env.SERIAL_PORT && process.env.SERIAL_PORT !== "NONE") {
-  initArduinoSerial()
-} else {
-  console.log("⚠️ Serial deshabilitado")
+initArduinoSerial()
+
+// =============================
+// MANEJO DE ERRORES
+// =============================
+app.use((err, req, res, next) => {
+  console.error("❌ Error interno:", err.stack)
+  res.status(500).json({ mensaje: "Error interno del servidor" })
+})
+
+// =============================
+// INICIAR SERVIDOR (RAILWAY)
+// =============================
+const PORT = process.env.PORT
+
+if (!PORT) {
+  console.error("❌ PORT no definido")
+  process.exit(1)
 }
 
-// ============================
-// INICIAR SERVIDOR
-// ============================
-const PORT = process.env.PORT || 5000
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Servidor escuchando en puerto ${PORT}`)
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`)
 })
+
