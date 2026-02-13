@@ -1,21 +1,29 @@
 const express = require("express");
 const router = express.Router();
-const questionController = require("../controllers/question.controller");
-const authMiddleware = require("../middlewares/auth.middleware.js");
+const Question = require("../models/question.model");
 
-// ✅ Ruta pública para obtener preguntas por categoría y dificultad
-router.get("/category/:categoria", questionController.getByCategoryAndDifficulty);
+// ================================
+// 🔥 OBTENER PREGUNTAS POR CATEGORÍA
+// GET /api/questions/category/:category?difficulty=facil
+// ================================
+router.get("/category/:category", async (req, res) => {
+  try {
+    const { category } = req.params;
+    const { difficulty } = req.query;
 
-// ✅ Ruta para crear preguntas de muestra (sin autenticación)
-router.post("/create-samples", questionController.createSampleQuestions);
+    const filter = { categoria: category };
 
-// ✅ Middleware de autenticación para el resto
-router.use(authMiddleware);
+    if (difficulty) {
+      filter.dificultad = difficulty;
+    }
 
-// ✅ CRUD para docentes autenticados
-router.get("/docente", questionController.obtenerPreguntasDocente);
-router.post("/crear", questionController.crearPregunta);
-router.put("/:id", questionController.actualizarPregunta);
-router.delete("/:id", questionController.eliminarPregunta);
+    const preguntas = await Question.find(filter);
+
+    res.json({ preguntas });
+  } catch (error) {
+    console.error("❌ Error obteniendo preguntas:", error);
+    res.status(500).json({ mensaje: "Error obteniendo preguntas" });
+  }
+});
 
 module.exports = router;
