@@ -1,0 +1,9 @@
+[phases.setup]
+nixPkgs = ["nodejs_18"]
+
+[phases.install]
+dependsOn = ["setup"]
+cmds = ["cd mathspin-backend && npm install"]
+
+[start]
+cmd = "cd mathspin-backend && npm start"
