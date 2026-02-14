@@ -1,30 +1,52 @@
-const Question = require("../models/question.model");
+ const Question = require("../models/question.model");
 
 // Crear pregunta
 exports.crearPregunta = async (req, res) => {
   try {
+    console.log('📝 === CREAR PREGUNTA ===');
+    console.log('📦 req.body completo:', JSON.stringify(req.body, null, 2));
+    console.log('👤 req.userId:', req.userId);
+    
     const { titulo, pregunta, categoria, dificultad, opciones, respuestaCorrecta, imagen, tieneLatex } = req.body;
     
-    console.log('📝 Creando pregunta:', { titulo, categoria, dificultad, opciones: opciones?.length });
+    console.log('📋 Datos extraídos:', { 
+      titulo, 
+      pregunta,
+      categoria, 
+      dificultad, 
+      opciones, 
+      respuestaCorrecta,
+      tipoOpciones: typeof opciones,
+      esArray: Array.isArray(opciones),
+      longitudOpciones: opciones?.length
+    });
 
     // Validación
-    if (!titulo || !categoria || !dificultad || !opciones || !respuestaCorrecta) {
-      console.error('❌ Faltan datos:', { titulo: !!titulo, categoria: !!categoria, dificultad: !!dificultad, opciones: !!opciones, respuestaCorrecta: !!respuestaCorrecta });
+    if (!titulo || !categoria || !dificultad || !opciones || respuestaCorrecta === undefined) {
+      console.error('❌ Faltan datos:', { 
+        titulo: !!titulo, 
+        categoria: !!categoria, 
+        dificultad: !!dificultad, 
+        opciones: !!opciones, 
+        respuestaCorrecta: respuestaCorrecta !== undefined 
+      });
       return res.status(400).json({ 
         mensaje: "Faltan datos obligatorios",
-        faltantes: {
-          titulo: !titulo,
-          categoria: !categoria,
-          dificultad: !dificultad,
-          opciones: !opciones,
-          respuestaCorrecta: !respuestaCorrecta
+        recibido: {
+          titulo: !!titulo,
+          categoria: !!categoria,
+          dificultad: !!dificultad,
+          opciones: !!opciones,
+          respuestaCorrecta: respuestaCorrecta !== undefined
         }
       });
     }
 
     if (!Array.isArray(opciones) || opciones.length !== 4) {
+      console.error('❌ Opciones inválidas:', { tipo: typeof opciones, longitud: opciones?.length });
       return res.status(400).json({ 
-        mensaje: "Debe haber exactamente 4 opciones" 
+        mensaje: "Debe haber exactamente 4 opciones",
+        recibido: { tipo: typeof opciones, longitud: opciones?.length, valor: opciones }
       });
     }
 
@@ -34,8 +56,8 @@ exports.crearPregunta = async (req, res) => {
       categoria: categoria.toLowerCase().trim(),
       dificultad: dificultad.toLowerCase().trim(),
       opciones,
-      respuestaCorrecta,
-      docenteId: req.userId,  // ✅ Usar req.userId del middleware
+      respuestaCorrecta: String(respuestaCorrecta),
+      docenteId: req.userId,
       imagen,
       tieneLatex: tieneLatex || false,
       activa: true,
