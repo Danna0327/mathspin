@@ -189,50 +189,81 @@ async function crearCurso(e) {
 async function crearPregunta(e) {
   e.preventDefault();
   
-  const titulo = document.getElementById("tituloPregunta")?.value.trim();
+  console.log('📝 Intentando crear pregunta...');
+  
+  // ✅ IDs CORRECTOS del HTML
+  const titulo = document.getElementById("textoPregunta")?.value.trim();
   const categoria = document.getElementById("categoriaPregunta")?.value;
   const dificultad = document.getElementById("dificultadPregunta")?.value;
   
   const opciones = [
-    document.getElementById("opcionA")?.value.trim(),
-    document.getElementById("opcionB")?.value.trim(),
-    document.getElementById("opcionC")?.value.trim(),
-    document.getElementById("opcionD")?.value.trim(),
+    document.getElementById("opcion0")?.value.trim(),
+    document.getElementById("opcion1")?.value.trim(),
+    document.getElementById("opcion2")?.value.trim(),
+    document.getElementById("opcion3")?.value.trim(),
   ];
   
   const respuestaCorrecta = document.querySelector('input[name="respuestaCorrecta"]:checked')?.value;
   
-  if (!titulo || !categoria || !dificultad || opciones.some(o => !o) || !respuestaCorrecta) {
+  console.log('📋 Datos del formulario:', {
+    titulo,
+    categoria,
+    dificultad,
+    opciones,
+    respuestaCorrecta
+  });
+  
+  if (!titulo || !categoria || !dificultad || opciones.some(o => !o) || respuestaCorrecta === undefined) {
+    console.error('❌ Faltan campos:', {
+      titulo: !!titulo,
+      categoria: !!categoria,
+      dificultad: !!dificultad,
+      opciones: opciones.map(o => !!o),
+      respuestaCorrecta: !!respuestaCorrecta
+    });
     alert("Todos los campos son obligatorios");
     return;
   }
   
   try {
+    const body = {
+      titulo,
+      pregunta: titulo,
+      categoria,
+      dificultad,
+      opciones,
+      respuestaCorrecta,
+    };
+    
+    console.log('📤 Enviando pregunta:', body);
+    
     const res = await fetch(`${API_BASE_URL}/questions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        titulo,
-        pregunta: titulo,
-        categoria,
-        dificultad,
-        opciones,
-        respuestaCorrecta,
-      }),
+      body: JSON.stringify(body),
     });
     
-    if (!res.ok) throw new Error(await res.text());
+    console.log('📡 Response:', res.status);
     
-    alert("✅ Pregunta creada!");
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('❌ Error del servidor:', errorText);
+      throw new Error(errorText);
+    }
+    
+    const data = await res.json();
+    console.log('✅ Pregunta creada:', data);
+    
+    alert("✅ Pregunta creada exitosamente!");
     cerrarModal("modalPregunta");
     cargarPreguntas();
     
   } catch (error) {
-    console.error('❌', error);
-    alert("Error al crear pregunta");
+    console.error('❌ Error:', error);
+    alert("Error al crear pregunta: " + error.message);
   }
 }
 
