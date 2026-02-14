@@ -1,4 +1,4 @@
-// ========== CONFIGURACIÓN ==========
+ // ========== CONFIGURACIÓN ==========
 const token = localStorage.getItem("token");
 
 if (!token) {
@@ -190,6 +190,7 @@ async function crearPregunta(e) {
   e.preventDefault();
   
   console.log('📝 Intentando crear pregunta...');
+  console.log('📋 Formulario:', e.target);
   
   // ✅ IDs CORRECTOS del HTML
   const titulo = document.getElementById("textoPregunta")?.value.trim();
@@ -205,23 +206,33 @@ async function crearPregunta(e) {
   
   const respuestaCorrecta = document.querySelector('input[name="respuestaCorrecta"]:checked')?.value;
   
-  console.log('📋 Datos del formulario:', {
+  console.log('📋 Datos capturados:', {
     titulo,
     categoria,
     dificultad,
     opciones,
-    respuestaCorrecta
+    respuestaCorrecta,
+    tiposOpciones: opciones.map(o => typeof o),
+    longitudesOpciones: opciones.map(o => o?.length)
   });
   
+  // Validación con logging detallado
+  const validacion = {
+    titulo: !!titulo,
+    categoria: !!categoria,
+    dificultad: !!dificultad,
+    opcion0: !!opciones[0],
+    opcion1: !!opciones[1],
+    opcion2: !!opciones[2],
+    opcion3: !!opciones[3],
+    respuestaCorrecta: respuestaCorrecta !== undefined && respuestaCorrecta !== null
+  };
+  
+  console.log('✅ Validación:', validacion);
+  
   if (!titulo || !categoria || !dificultad || opciones.some(o => !o) || respuestaCorrecta === undefined) {
-    console.error('❌ Faltan campos:', {
-      titulo: !!titulo,
-      categoria: !!categoria,
-      dificultad: !!dificultad,
-      opciones: opciones.map(o => !!o),
-      respuestaCorrecta: !!respuestaCorrecta
-    });
-    alert("Todos los campos son obligatorios");
+    console.error('❌ Faltan campos:', validacion);
+    alert(`Faltan campos obligatorios:\n${Object.entries(validacion).filter(([k,v]) => !v).map(([k]) => k).join('\n')}`);
     return;
   }
   
@@ -232,10 +243,10 @@ async function crearPregunta(e) {
       categoria,
       dificultad,
       opciones,
-      respuestaCorrecta,
+      respuestaCorrecta: String(respuestaCorrecta),  // ✅ Asegurar que sea string
     };
     
-    console.log('📤 Enviando pregunta:', body);
+    console.log('📤 Enviando pregunta:', JSON.stringify(body, null, 2));
     
     const res = await fetch(`${API_BASE_URL}/questions`, {
       method: "POST",
@@ -246,11 +257,12 @@ async function crearPregunta(e) {
       body: JSON.stringify(body),
     });
     
-    console.log('📡 Response:', res.status);
+    console.log('📡 Response status:', res.status);
     
     if (!res.ok) {
       const errorText = await res.text();
       console.error('❌ Error del servidor:', errorText);
+      alert(`Error: ${errorText}`);
       throw new Error(errorText);
     }
     
