@@ -304,25 +304,29 @@ function mostrarCursos(cursos) {
     return;
   }
   
-  container.innerHTML = cursos.map(c => `
+  container.innerHTML = cursos.map(c => {
+    // ✅ Manejar ambos campos: codigoCurso o codigo
+    const codigo = c.codigoCurso || c.codigo || 'SIN-CODIGO';
+    
+    return `
     <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
       <h3 style="color: white; margin: 0 0 15px 0;">${c.nombreCurso}</h3>
       <div style="margin: 10px 0;">
         <span style="background: rgba(102,126,234,0.3); color: #fff; padding: 5px 10px; border-radius: 5px; font-weight: bold;">
-          ${c.codigoCurso}
+          ${codigo}
         </span>
       </div>
       <p style="color: rgba(255,255,255,0.7); margin: 10px 0;">
         👥 ${c.totalEstudiantes || c.estudiantes?.length || 0} estudiantes
       </p>
       <button 
-        onclick="copiarCodigo('${c.codigoCurso}')" 
+        onclick="copiarCodigo('${codigo}')" 
         style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600;"
       >
         📋 Copiar Código
       </button>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 // ========== CARGAR PREGUNTAS ==========
