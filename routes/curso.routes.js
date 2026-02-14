@@ -1,17 +1,13 @@
-const express = require("express")
-const router = express.Router()
-const cursoController = require("../controllers/curso.controller")
-const authMiddleware = require("../middlewares/auth.middleware.js")
+const express = require("express");
+const router = express.Router();
+const cursoController = require("../controllers/cursoController");
+const auth = require("../middleware/authMiddleware");
 
-// Todas las rutas requieren autenticación
-router.use(authMiddleware)
+// Crear curso
+router.post("/crear", auth, cursoController.crearCurso);
 
-// Rutas de cursos
-router.post("/crear", cursoController.crearCurso)
-router.get("/docente", cursoController.obtenerCursosDocente)
-router.get("/:cursoId/analytics", cursoController.obtenerAnalyticsCurso)
-router.get("/:cursoId/estudiantes", cursoController.obtenerEstudiantesCurso)
-router.delete("/estudiante/:estudianteId", cursoController.eliminarEstudianteCurso)
-router.put("/estudiante/:estudianteId/transferir", cursoController.transferirEstudiante)
+// Obtener cursos del docente
+router.get("/docente", auth, cursoController.obtenerCursosDocente);
 
-module.exports = router
+module.exports = router;
+
