@@ -15,7 +15,7 @@ exports.crearCurso = async (req, res) => {
     }
 
     // Verificar si el código ya existe
-    const cursoExistente = await Curso.findOne({ codigoCurso });
+    const cursoExistente = await Curso.findOne({ codigo: codigoCurso });
 
     if (cursoExistente) {
       return res.status(400).json({
@@ -26,7 +26,7 @@ exports.crearCurso = async (req, res) => {
     // Crear nuevo curso
     const nuevoCurso = new Curso({
       nombreCurso,
-      codigoCurso,
+      codigo: codigoCurso,  // ✅ Guardar en 'codigo'
       docenteId: req.userId,
       estudiantes: []
     });
