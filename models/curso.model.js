@@ -5,10 +5,19 @@ const cursoSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  codigoCurso: {
+  codigo: {  // ✅ Cambio: codigoCurso → codigo
     type: String,
     required: true,
     unique: true,
+  },
+  codigoCurso: {  // ✅ Alias para compatibilidad
+    type: String,
+    get() {
+      return this.codigo;
+    },
+    set(value) {
+      this.codigo = value;
+    }
   },
   docenteId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -21,6 +30,10 @@ const cursoSchema = new mongoose.Schema({
       ref: "User",
     },
   ],
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true, getters: true },
+  toObject: { virtuals: true, getters: true }
+});
 
 module.exports = mongoose.model("Curso", cursoSchema);
