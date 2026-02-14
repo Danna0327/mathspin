@@ -1,32 +1,75 @@
 // ========== CONFIGURACIÓN ==========
 const token = localStorage.getItem("token");
 
-// Verificar autenticación
 if (!token) {
-  console.error('❌ No hay token, redirigiendo...');
+  console.error('❌ No hay token');
   window.location.href = "/";
 }
 
-// API Base URL
 const API_BASE_URL = window.location.hostname === 'localhost'
   ? "http://localhost:5000/api"
   : `${window.location.origin}/api`;
 
-console.log('✅ Dashboard cargado');
-console.log('🔗 API URL:', API_BASE_URL);
+console.log('✅ Dashboard cargado - API:', API_BASE_URL);
 
 // ========== VARIABLES GLOBALES ==========
 let cursosActuales = [];
 let preguntasActuales = [];
 
-// ========== FUNCIONES DE MODAL ==========
+// ========== TABS ==========
+function setupTabs() {
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  console.log('🎛️ Configurando', tabBtns.length, 'tabs');
+  
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetTab = btn.dataset.tab;
+      console.log('📑 Cambiando a tab:', targetTab);
+      
+      // Remover active de todos
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+      
+      // Activar el seleccionado
+      btn.classList.add('active');
+      const targetContent = document.getElementById(targetTab);
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
+      
+      // Cargar datos del tab
+      cargarDatosTab(targetTab);
+    });
+  });
+}
+
+function cargarDatosTab(tab) {
+  console.log('📊 Cargando datos del tab:', tab);
+  
+  switch(tab) {
+    case 'cursos':
+      cargarCursos();
+      break;
+    case 'preguntas':
+      cargarPreguntas();
+      break;
+    case 'analytics':
+      // cargarAnalytics();
+      break;
+    case 'estudiantes':
+      // cargarEstudiantes();
+      break;
+  }
+}
+
+// ========== MODALES ==========
 function abrirModal(modalId) {
   console.log('📂 Abriendo modal:', modalId);
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.style.display = "flex";
-  } else {
-    console.error('❌ Modal no encontrado:', modalId);
   }
 }
 
@@ -35,116 +78,82 @@ function cerrarModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.style.display = "none";
-    
-    // Limpiar formulario si existe
     const form = modal.querySelector('form');
-    if (form) {
-      form.reset();
-    }
+    if (form) form.reset();
   }
 }
 
-// Cerrar modal al hacer clic fuera
 window.addEventListener("click", (e) => {
   if (e.target.classList.contains('modal')) {
     cerrarModal(e.target.id);
   }
 });
 
-// ========== EVENT LISTENERS DE BOTONES ==========
+// ========== EVENT LISTENERS ==========
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('🎛️ Configurando botones...');
+  console.log('🚀 Inicializando dashboard...');
   
-  // Botón Crear Curso (header)
+  // Tabs
+  setupTabs();
+  
+  // Botones crear/nuevo
   const crearCursoBtn = document.getElementById("crearCursoBtn");
-  if (crearCursoBtn) {
-    crearCursoBtn.addEventListener("click", () => abrirModal("modalCrearCurso"));
-    console.log('✅ Botón crearCursoBtn configurado');
-  }
-  
-  // Botón Nuevo Curso (en tab cursos)
   const nuevoCursoBtn = document.getElementById("nuevoCursoBtn");
-  if (nuevoCursoBtn) {
-    nuevoCursoBtn.addEventListener("click", () => abrirModal("modalCrearCurso"));
-    console.log('✅ Botón nuevoCursoBtn configurado');
-  }
-  
-  // Botón Nueva Pregunta
   const nuevaPreguntaBtn = document.getElementById("nuevaPreguntaBtn");
-  if (nuevaPreguntaBtn) {
-    nuevaPreguntaBtn.addEventListener("click", () => abrirModal("modalPregunta"));
-    console.log('✅ Botón nuevaPreguntaBtn configurado');
-  }
-  
-  // Botón Invitar Estudiante
-  const invitarEstudianteBtn = document.getElementById("invitarEstudianteBtn");
-  if (invitarEstudianteBtn) {
-    invitarEstudianteBtn.addEventListener("click", () => abrirModal("modalInvitar"));
-    console.log('✅ Botón invitarEstudianteBtn configurado');
-  }
-  
-  // Botón Logout
+  const invitarBtn = document.getElementById("invitarEstudianteBtn");
   const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", cerrarSesion);
-    console.log('✅ Botón logoutBtn configurado');
-  }
+  const copiarBtn = document.getElementById("copiarCodigoBtn");
   
-  // Botón Copiar Código
-  const copiarCodigoBtn = document.getElementById("copiarCodigoBtn");
-  if (copiarCodigoBtn) {
-    copiarCodigoBtn.addEventListener("click", copiarCodigoCurso);
-    console.log('✅ Botón copiarCodigoBtn configurado');
-  }
+  if (crearCursoBtn) crearCursoBtn.onclick = () => abrirModal("modalCrearCurso");
+  if (nuevoCursoBtn) nuevoCursoBtn.onclick = () => abrirModal("modalCrearCurso");
+  if (nuevaPreguntaBtn) nuevaPreguntaBtn.onclick = () => abrirModal("modalPregunta");
+  if (invitarBtn) invitarBtn.onclick = () => abrirModal("modalInvitar");
+  if (logoutBtn) logoutBtn.onclick = cerrarSesion;
+  if (copiarBtn) copiarBtn.onclick = copiarCodigoCurso;
   
-  // Botones cerrar modales
+  // Cerrar modales
   document.querySelectorAll('.close').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.onclick = (e) => {
       const modal = e.target.closest('.modal');
-      if (modal) {
-        cerrarModal(modal.id);
-      }
-    });
+      if (modal) cerrarModal(modal.id);
+    };
   });
   
   // Formularios
-  setupFormularios();
+  const formCurso = document.getElementById("formCrearCurso");
+  const formPregunta = document.getElementById("formPregunta");
+  
+  if (formCurso) formCurso.onsubmit = crearCurso;
+  if (formPregunta) formPregunta.onsubmit = crearPregunta;
   
   // Cargar datos iniciales
   cargarCursos();
   cargarPreguntas();
-  actualizarNombreUsuario();
   
-  console.log('✅ Dashboard inicializado completamente');
+  // Nombre usuario
+  const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const nombreEl = document.getElementById('nombreDocente');
+  if (nombreEl) nombreEl.textContent = userData.nombre || 'Docente';
+  
+  console.log('✅ Dashboard listo');
 });
-
-// ========== FORMULARIOS ==========
-function setupFormularios() {
-  // Formulario Crear Curso
-  const formCrearCurso = document.getElementById("formCrearCurso");
-  if (formCrearCurso) {
-    formCrearCurso.addEventListener("submit", crearCurso);
-    console.log('✅ Form crearCurso configurado');
-  }
-  
-  // Formulario Crear Pregunta
-  const formPregunta = document.getElementById("formPregunta");
-  if (formPregunta) {
-    formPregunta.addEventListener("submit", crearPregunta);
-    console.log('✅ Form pregunta configurado');
-  }
-}
 
 // ========== CREAR CURSO ==========
 async function crearCurso(e) {
   e.preventDefault();
-  console.log('📝 Creando curso...');
   
   const nombreCurso = document.getElementById("nombreCurso").value.trim();
+  const nivelCurso = document.getElementById("nivelCurso")?.value.trim();
+  const paraleloCurso = document.getElementById("paralelo Curso")?.value.trim();
   
   if (!nombreCurso) {
     alert("El nombre del curso es obligatorio");
     return;
+  }
+  
+  let nombreCompleto = nombreCurso;
+  if (nivelCurso && paraleloCurso) {
+    nombreCompleto = `${nombreCurso} ${nivelCurso}° ${paraleloCurso}`;
   }
   
   const codigoCurso = generarCodigo();
@@ -156,23 +165,22 @@ async function crearCurso(e) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ nombreCurso, codigoCurso }),
+      body: JSON.stringify({ nombreCurso: nombreCompleto, codigoCurso }),
     });
     
     const data = await res.json();
-    console.log('📡 Response crear curso:', res.status, data);
     
     if (!res.ok) {
-      alert(data.mensaje || "Error al crear curso");
+      alert(data.mensaje || "Error");
       return;
     }
     
-    alert(`✅ Curso creado!\nNombre: ${nombreCurso}\nCódigo: ${codigoCurso}`);
+    alert(`✅ Curso creado!\nNombre: ${nombreCompleto}\nCódigo: ${codigoCurso}`);
     cerrarModal("modalCrearCurso");
     cargarCursos();
     
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌', error);
     alert("Error al crear curso");
   }
 }
@@ -180,7 +188,6 @@ async function crearCurso(e) {
 // ========== CREAR PREGUNTA ==========
 async function crearPregunta(e) {
   e.preventDefault();
-  console.log('📝 Creando pregunta...');
   
   const titulo = document.getElementById("tituloPregunta")?.value.trim();
   const categoria = document.getElementById("categoriaPregunta")?.value;
@@ -217,20 +224,14 @@ async function crearPregunta(e) {
       }),
     });
     
-    const data = await res.json();
-    console.log('📡 Response crear pregunta:', res.status, data);
+    if (!res.ok) throw new Error(await res.text());
     
-    if (!res.ok) {
-      alert(data.mensaje || "Error al crear pregunta");
-      return;
-    }
-    
-    alert("✅ Pregunta creada exitosamente!");
+    alert("✅ Pregunta creada!");
     cerrarModal("modalPregunta");
     cargarPreguntas();
     
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌', error);
     alert("Error al crear pregunta");
   }
 }
@@ -244,59 +245,48 @@ async function cargarCursos() {
       headers: { Authorization: `Bearer ${token}` },
     });
     
-    if (!res.ok) {
-      if (res.status === 401) {
-        alert('Sesión expirada');
-        localStorage.removeItem('token');
-        window.location.href = '/';
-        return;
-      }
-      throw new Error(`Error ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`Error ${res.status}`);
     
     cursosActuales = await res.json();
-    console.log('✅ Cursos cargados:', cursosActuales.length);
+    console.log('✅ Cursos:', cursosActuales.length);
     
     mostrarCursos(cursosActuales);
     
   } catch (error) {
-    console.error('❌ Error cargando cursos:', error);
+    console.error('❌ Error cursos:', error);
+    mostrarCursos([]);
   }
 }
 
 // ========== MOSTRAR CURSOS ==========
 function mostrarCursos(cursos) {
   const container = document.getElementById("cursosGrid");
-  
-  if (!container) {
-    console.warn('⚠️ Container cursosGrid no encontrado');
-    return;
-  }
+  if (!container) return;
   
   if (cursos.length === 0) {
     container.innerHTML = `
       <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: white;">
-        <p style="font-size: 18px; margin-bottom: 10px;">📚 No tienes cursos creados</p>
-        <p style="opacity: 0.7;">Crea tu primer curso usando el botón "Crear Curso"</p>
+        <p style="font-size: 18px;">📚 No hay cursos</p>
+        <p style="opacity: 0.7;">Crea uno con el botón "Crear Curso"</p>
       </div>
     `;
     return;
   }
   
-  container.innerHTML = cursos.map(curso => `
-    <div class="curso-card" style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
-      <h3 style="color: white; margin: 0 0 15px 0; font-size: 20px;">${curso.nombreCurso}</h3>
+  container.innerHTML = cursos.map(c => `
+    <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px);">
+      <h3 style="color: white; margin: 0 0 15px 0;">${c.nombreCurso}</h3>
       <div style="margin: 10px 0;">
-        <span style="background: rgba(102,126,234,0.3); color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 14px; font-weight: bold;">
-          ${curso.codigoCurso}
+        <span style="background: rgba(102,126,234,0.3); color: #fff; padding: 5px 10px; border-radius: 5px; font-weight: bold;">
+          ${c.codigoCurso}
         </span>
       </div>
-      <p style="color: rgba(255,255,255,0.7); margin: 10px 0; font-size: 14px;">
-        👥 ${curso.estudiantes?.length || 0} estudiantes
+      <p style="color: rgba(255,255,255,0.7); margin: 10px 0;">
+        👥 ${c.totalEstudiantes || c.estudiantes?.length || 0} estudiantes
       </p>
       <button 
-        onclick="copiarCodigo('${curso.codigoCurso}')" 
-        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: 600; width: 100%;"
+        onclick="copiarCodigo('${c.codigoCurso}')" 
+        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600;"
       >
         📋 Copiar Código
       </button>
@@ -316,33 +306,33 @@ async function cargarPreguntas() {
     if (!res.ok) throw new Error(`Error ${res.status}`);
     
     preguntasActuales = await res.json();
-    console.log('✅ Preguntas cargadas:', preguntasActuales.length);
+    console.log('✅ Preguntas:', preguntasActuales.length);
     
     mostrarPreguntas(preguntasActuales);
     
   } catch (error) {
-    console.error('❌ Error cargando preguntas:', error);
+    console.error('❌ Error preguntas:', error);
+    mostrarPreguntas([]);
   }
 }
 
 // ========== MOSTRAR PREGUNTAS ==========
 function mostrarPreguntas(preguntas) {
   const container = document.getElementById("preguntasGrid");
-  
   if (!container) return;
   
   if (preguntas.length === 0) {
     container.innerHTML = `
       <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: white;">
-        <p style="font-size: 18px; margin-bottom: 10px;">❓ No hay preguntas creadas</p>
-        <p style="opacity: 0.7;">Crea preguntas usando el botón "Agregar Pregunta"</p>
+        <p style="font-size: 18px;">❓ No hay preguntas</p>
+        <p style="opacity: 0.7;">Crea una con el botón "Agregar Pregunta"</p>
       </div>
     `;
     return;
   }
   
   container.innerHTML = preguntas.map(p => `
-    <div class="pregunta-card" style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
       <div style="margin-bottom: 10px;">
         <span style="background: rgba(102,126,234,0.3); color: #fff; padding: 3px 8px; border-radius: 5px; font-size: 12px; margin-right: 5px;">
           ${p.categoria}
@@ -353,13 +343,13 @@ function mostrarPreguntas(preguntas) {
       </div>
       <p style="color: white; font-weight: 600; margin: 10px 0;">${p.titulo || p.pregunta}</p>
       <div style="font-size: 13px; color: rgba(255,255,255,0.7);">
-        ${p.opciones.map((op, i) => `${String.fromCharCode(65+i)}. ${op}`).join(' • ')}
+        ${p.opciones?.map((op, i) => `${String.fromCharCode(65+i)}. ${op}`).join(' • ') || ''}
       </div>
     </div>
   `).join('');
 }
 
-// ========== COPIAR CÓDIGO ==========
+// ========== UTILIDADES ==========
 function copiarCodigo(codigo) {
   const textarea = document.createElement('textarea');
   textarea.value = codigo;
@@ -372,7 +362,7 @@ function copiarCodigo(codigo) {
     document.execCommand('copy');
     alert(`✅ Código copiado: ${codigo}`);
   } catch (err) {
-    alert(`Código del curso: ${codigo}\n(Copia manualmente)`);
+    alert(`Código: ${codigo}\n(Copia manualmente)`);
   }
   
   document.body.removeChild(textarea);
@@ -380,14 +370,11 @@ function copiarCodigo(codigo) {
 
 function copiarCodigoCurso() {
   const input = document.getElementById("codigoCurso");
-  if (input && input.value) {
+  if (input?.value) {
     copiarCodigo(input.value);
-  } else {
-    alert("No hay código para copiar");
   }
 }
 
-// ========== GENERAR CÓDIGO ==========
 function generarCodigo() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let codigo = "";
@@ -397,27 +384,9 @@ function generarCodigo() {
   return codigo;
 }
 
-// ========== CERRAR SESIÓN ==========
 function cerrarSesion() {
-  console.log('👋 Cerrando sesión...');
-  localStorage.removeItem("token");
-  localStorage.removeItem("currentUser");
+  localStorage.clear();
   window.location.href = "/";
 }
 
-// ========== ACTUALIZAR NOMBRE USUARIO ==========
-function actualizarNombreUsuario() {
-  const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  const nombreDocente = document.getElementById('nombreDocente');
-  
-  if (nombreDocente) {
-    nombreDocente.textContent = userData.nombre || userData.nombreUsuario || 'Docente';
-  }
-}
-
-// ========== ERROR HANDLER GLOBAL ==========
-window.addEventListener('error', (e) => {
-  console.error('❌ Error global:', e.error);
-});
-
-console.log('✅ Dashboard script cargado');
+console.log('✅ Script cargado');
