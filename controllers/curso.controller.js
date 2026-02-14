@@ -1,62 +1,44 @@
-const Curso = require("../models/curso.model");
+const Curso = require("../models/Curso");
 
-// ================================
-// 🔹 CREAR CURSO
-// ================================
+// Crear curso
 exports.crearCurso = async (req, res) => {
   try {
-    console.log("📥 Body recibido:", req.body);
-
-    const { nombre, paralelo, descripcion } = req.body;
+    const { nombreCurso, codigoCurso } = req.body;
 
     // Validación básica
-    if (!nombre || !paralelo) {
+    if (!nombreCurso || !codigoCurso) {
       return res.status(400).json({
-        mensaje: "Nombre y paralelo son obligatorios",
+        message: "Todos los campos son obligatorios",
       });
     }
 
-    // Crear curso
+    // Verificar si el código ya existe
+    const cursoExistente = await Curso.findOne({ codigoCurso });
+
+    if (cursoExistente) {
+      return res.status(400).json({
+        message: "El código ya existe, intenta nuevamente",
+      });
+    }
+
+    // Crear nuevo curso
     const nuevoCurso = new Curso({
-      nombre,
-      paralelo,
-      descripcion,
-      docenteId: req.user.id, // viene del middleware
+      nombreCurso,
+      codigoCurso,
+      profesor: req.user.id, // viene del middleware de autenticación
     });
 
     await nuevoCurso.save();
 
     res.status(201).json({
-      mensaje: "Curso creado exitosamente",
+      message: "Curso creado correctamente",
       curso: nuevoCurso,
     });
 
   } catch (error) {
-    console.error("❌ Error al crear curso:", error);
+    console.error("Error al crear curso:", error);
     res.status(500).json({
-      mensaje: "Error interno del servidor",
-      error: error.message,
-    });
-  }
-};
-
-// ================================
-// 🔹 OBTENER CURSOS DEL DOCENTE
-// ================================
-exports.obtenerCursosDocente = async (req, res) => {
-  try {
-    const cursos = await Curso.find({
-      docenteId: req.user.id,
-      activo: true,
-    }).sort({ createdAt: -1 });
-
-    res.json({ cursos });
-
-  } catch (error) {
-    console.error("❌ Error al obtener cursos:", error);
-    res.status(500).json({
-      mensaje: "Error al obtener cursos",
-      error: error.message,
+      message: "Error del servidor",
     });
   }
 };
