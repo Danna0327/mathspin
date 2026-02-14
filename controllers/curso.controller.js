@@ -1,39 +1,47 @@
 const Curso = require("../models/curso.model");
+const Usuario = require("../models/user.model");
+const Session = require("../models/session.model");
 
 // ======================================
 // 🔥 CREAR CURSO
-// POST /api/cursos/crear
 // ======================================
 exports.crearCurso = async (req, res) => {
   try {
-    const { nombre, nivel, paralelo } = req.body;
-
+    const { nombre, paralelo, descripcion, codigo } = req.body;
     const docenteId = req.user?._id || req.user?.id;
 
     if (!docenteId) {
-      return res.status(401).json({
-        mensaje: "Usuario no autenticado",
+      return res.status(401).json({ mensaje: "Usuario no autenticado" });
+    }
+
+    if (!paralelo) {
+      return res.status(400).json({
+        mensaje: "El paralelo es obligatorio",
       });
     }
 
-    if (!nombre || !nivel || !paralelo) {
-      return res.status(400).json({
-        mensaje: "Nombre, nivel y paralelo son obligatorios",
-      });
+    // Verificar código si se envía manualmente
+    if (codigo) {
+      const existe = await Curso.findOne({ codigo });
+      if (existe) {
+        return res.status(400).json({
+          mensaje: "El código ya existe",
+        });
+      }
     }
 
     const nuevoCurso = new Curso({
       nombre,
-      nivel,
       paralelo,
+      descripcion,
+      codigo, // si no se envía, se genera automáticamente
       docenteId,
-      estudiantes: [],
     });
 
     await nuevoCurso.save();
 
     res.status(201).json({
-      mensaje: "Curso creado exitosamente",
+      mensaje: "Curso creado correctamente",
       curso: nuevoCurso,
     });
 
@@ -48,26 +56,22 @@ exports.crearCurso = async (req, res) => {
 
 // ======================================
 // 🔥 OBTENER CURSOS DEL DOCENTE
-// GET /api/cursos/docente
 // ======================================
 exports.obtenerCursosDocente = async (req, res) => {
   try {
     const docenteId = req.user?._id || req.user?.id;
 
-    if (!docenteId) {
-      return res.status(401).json({
-        mensaje: "Usuario no autenticado",
-      });
-    }
-
-    const cursos = await Curso.find({ docenteId }).sort({ createdAt: -1 });
+    const cursos = await Curso.find({
+      docenteId,
+      activo: true,
+    }).sort({ createdAt: -1 });
 
     res.json({ cursos });
 
   } catch (error) {
     console.error("🔥 ERROR obtenerCursosDocente:", error);
     res.status(500).json({
-      mensaje: "Error obteniendo cursos",
+      mensaje: "Error al obtener cursos",
       error: error.message,
     });
   }
@@ -75,23 +79,18 @@ exports.obtenerCursosDocente = async (req, res) => {
 
 // ======================================
 // 🔥 OBTENER ESTUDIANTES DE UN CURSO
-// GET /api/cursos/:cursoId/estudiantes
 // ======================================
 exports.obtenerEstudiantesCurso = async (req, res) => {
   try {
     const { cursoId } = req.params;
 
-    const curso = await Curso.findById(cursoId).populate("estudiantes");
+    const estudiantes = await Usuario.find({
+      cursoId,
+      rol: "estudiante",
+      activo: true,
+    }).select("nombre apellido nombreUsuario ultimaConexion createdAt");
 
-    if (!curso) {
-      return res.status(404).json({
-        mensaje: "Curso no encontrado",
-      });
-    }
-
-    res.json({
-      estudiantes: curso.estudiantes,
-    });
+    res.json({ estudiantes });
 
   } catch (error) {
     console.error("🔥 ERROR obtenerEstudiantesCurso:", error);
@@ -103,30 +102,18 @@ exports.obtenerEstudiantesCurso = async (req, res) => {
 };
 
 // ======================================
-// 🔥 ELIMINAR ESTUDIANTE DE UN CURSO
-// DELETE /api/cursos/estudiante/:estudianteId
+// 🔥 ELIMINAR ESTUDIANTE DEL CURSO
 // ======================================
 exports.eliminarEstudianteCurso = async (req, res) => {
   try {
     const { estudianteId } = req.params;
-    const { cursoId } = req.body;
 
-    const curso = await Curso.findById(cursoId);
-
-    if (!curso) {
-      return res.status(404).json({
-        mensaje: "Curso no encontrado",
-      });
-    }
-
-    curso.estudiantes = curso.estudiantes.filter(
-      (id) => id.toString() !== estudianteId
-    );
-
-    await curso.save();
+    await Usuario.findByIdAndUpdate(estudianteId, {
+      cursoId: null,
+    });
 
     res.json({
-      mensaje: "Estudiante eliminado correctamente",
+      mensaje: "Estudiante eliminado del curso",
     });
 
   } catch (error) {
@@ -139,35 +126,16 @@ exports.eliminarEstudianteCurso = async (req, res) => {
 };
 
 // ======================================
-// 🔥 TRANSFERIR ESTUDIANTE A OTRO CURSO
-// PUT /api/cursos/estudiante/:estudianteId/transferir
+// 🔥 TRANSFERIR ESTUDIANTE
 // ======================================
 exports.transferirEstudiante = async (req, res) => {
   try {
     const { estudianteId } = req.params;
-    const { cursoOrigenId, cursoDestinoId } = req.body;
+    const { nuevoCursoId } = req.body;
 
-    const cursoOrigen = await Curso.findById(cursoOrigenId);
-    const cursoDestino = await Curso.findById(cursoDestinoId);
-
-    if (!cursoOrigen || !cursoDestino) {
-      return res.status(404).json({
-        mensaje: "Curso origen o destino no encontrado",
-      });
-    }
-
-    // Quitar del curso origen
-    cursoOrigen.estudiantes = cursoOrigen.estudiantes.filter(
-      (id) => id.toString() !== estudianteId
-    );
-
-    // Agregar al curso destino
-    if (!cursoDestino.estudiantes.includes(estudianteId)) {
-      cursoDestino.estudiantes.push(estudianteId);
-    }
-
-    await cursoOrigen.save();
-    await cursoDestino.save();
+    await Usuario.findByIdAndUpdate(estudianteId, {
+      cursoId: nuevoCursoId,
+    });
 
     res.json({
       mensaje: "Estudiante transferido correctamente",
@@ -184,7 +152,6 @@ exports.transferirEstudiante = async (req, res) => {
 
 // ======================================
 // 🔥 ANALYTICS DEL CURSO
-// GET /api/cursos/:cursoId/analytics
 // ======================================
 exports.obtenerAnalyticsCurso = async (req, res) => {
   try {
@@ -198,9 +165,32 @@ exports.obtenerAnalyticsCurso = async (req, res) => {
       });
     }
 
+    const estudiantes = await Usuario.find({
+      cursoId,
+      activo: true,
+    });
+
+    const sesiones = await Session.find({
+      usuarioId: { $in: estudiantes.map(e => e._id) },
+    });
+
+    const promedioGeneral =
+      sesiones.length > 0
+        ? Math.round(
+            sesiones.reduce((acc, s) => acc + s.porcentaje, 0) /
+              sesiones.length
+          )
+        : 0;
+
+    // Actualizar estadísticas en el curso
+    curso.totalEstudiantes = estudiantes.length;
+    curso.totalSesiones = sesiones.length;
+    await curso.save();
+
     res.json({
-      totalEstudiantes: curso.estudiantes.length,
-      curso,
+      totalEstudiantes: estudiantes.length,
+      totalSesiones: sesiones.length,
+      promedioGeneral,
     });
 
   } catch (error) {
