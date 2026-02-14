@@ -5,15 +5,16 @@ const questionSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  pregunta: {  // Alias para compatibilidad
-    type: String
+  pregunta: {  
+    type: String,
+    required: false  // Opcional, puede ser igual a titulo
   },
   opciones: { 
     type: [String], 
     required: true,
     validate: {
       validator: function(v) {
-        return v && v.length === 4;
+        return Array.isArray(v) && v.length === 4;
       },
       message: 'Debe haber exactamente 4 opciones'
     }
@@ -55,8 +56,9 @@ const questionSchema = new mongoose.Schema({
   timestamps: true 
 });
 
-// Índices
+// Índices para búsquedas rápidas
 questionSchema.index({ categoria: 1, dificultad: 1 });
 questionSchema.index({ docenteId: 1 });
+questionSchema.index({ activa: 1 });
 
 module.exports = mongoose.model("Question", questionSchema);
