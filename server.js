@@ -75,6 +75,40 @@ app.get("*", (req, res) => {
 // 🔥 INICIAR SERVIDOR
 // ================================
 const PORT = process.env.PORT || 8080;
+// ⚠️ CÓDIGO TEMPORAL - ELIMINAR DESPUÉS DE EJECUTAR
+async function fixIndicesOnStartup() {
+  try {
+    const db = mongoose.connection.db;
+    const cursos = db.collection('cursos');
+    
+    console.log('\n🔧 LIMPIANDO ÍNDICES...');
+    
+    try {
+      await cursos.dropIndex('codigoCurso_1');
+      console.log('✅ codigoCurso_1 eliminado');
+    } catch (e) {
+      console.log('⚠️ codigoCurso_1 no existe');
+    }
+    
+    try {
+      await cursos.dropIndex('codigo_1');
+      console.log('✅ codigo_1 eliminado');
+    } catch (e) {
+      console.log('⚠️ codigo_1 no existe');
+    }
+    
+    await cursos.createIndex({ codigo: 1 }, { unique: true, sparse: true });
+    console.log('✅ Índice codigo creado correctamente');
+    
+  } catch (error) {
+    console.error('❌ Error limpiando índices:', error.message);
+  }
+}
+
+// Llamar después de conectar a MongoDB
+mongoose.connection.once('open', () => {
+  fixIndicesOnStartup();
+});
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
