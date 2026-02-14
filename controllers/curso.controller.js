@@ -8,9 +8,8 @@ const Session = require("../models/session.model");
 exports.crearCurso = async (req, res) => {
   try {
     console.log("📥 Body recibido:", req.body);
-    console.log("👤 Usuario:", req.user);
 
-    const docenteId = req.user?._id || req.user?.id;
+    const docenteId = req.user?._id;
 
     if (!docenteId) {
       return res.status(401).json({
@@ -18,18 +17,21 @@ exports.crearCurso = async (req, res) => {
       });
     }
 
-    const { nombre, paralelo, descripcion } = req.body;
+    const { nombreCurso, codigoCurso } = req.body;
 
-    if (!paralelo || paralelo.trim() === "") {
+    if (!nombreCurso || nombreCurso.trim() === "") {
       return res.status(400).json({
-        mensaje: "El paralelo es obligatorio",
+        mensaje: "El nombre del curso es obligatorio",
       });
     }
 
+    // Generar paralelo automático (puedes cambiar esto luego)
+    const paralelo = "A";
+
     const nuevoCurso = new Curso({
-      nombre: nombre || "Curso sin nombre",
-      paralelo: paralelo.trim(),
-      descripcion: descripcion || "",
+      nombre: nombreCurso.trim(),
+      paralelo,
+      codigo: codigoCurso || undefined,
       docenteId,
     });
 
