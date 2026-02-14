@@ -7,7 +7,6 @@ exports.crearCurso = async (req, res) => {
   try {
     const { nombreCurso, codigoCurso } = req.body;
 
-    // Validación básica
     if (!nombreCurso || !codigoCurso) {
       return res.status(400).json({
         mensaje: "Todos los campos son obligatorios",
@@ -15,7 +14,7 @@ exports.crearCurso = async (req, res) => {
     }
 
     // Verificar si el código ya existe
-    const cursoExistente = await Curso.findOne({ codigo: codigoCurso });
+    const cursoExistente = await Curso.findOne({ codigoCurso });
 
     if (cursoExistente) {
       return res.status(400).json({
@@ -26,7 +25,7 @@ exports.crearCurso = async (req, res) => {
     // Crear nuevo curso
     const nuevoCurso = new Curso({
       nombreCurso,
-      codigo: codigoCurso,  // ✅ Guardar en 'codigo'
+      codigoCurso,  // ✅ Guardar en codigoCurso
       docenteId: req.userId,
       estudiantes: []
     });
@@ -53,21 +52,13 @@ exports.obtenerCursosDocente = async (req, res) => {
   try {
     console.log('📚 Obteniendo cursos del docente:', req.userId);
     
-    // ✅ FIX: Sin populate para evitar error de schema
     const cursos = await Curso.find({ docenteId: req.userId })
       .sort({ createdAt: -1 })
-      .lean(); // lean() para mejor performance
+      .lean();
 
     console.log('✅ Cursos encontrados:', cursos.length);
     
-    // Agregar count de estudiantes manualmente
-    const cursosConInfo = cursos.map(curso => ({
-      ...curso,
-      estudiantes: curso.estudiantes || [],
-      totalEstudiantes: curso.estudiantes?.length || 0
-    }));
-    
-    res.json(cursosConInfo);
+    res.json(cursos);
   } catch (error) {
     console.error('❌ Error obteniendo cursos del docente:', error);
     res.status(500).json({ 
@@ -83,21 +74,17 @@ exports.obtenerAnalyticsCurso = async (req, res) => {
     const { cursoId } = req.params;
     const { periodo } = req.query;
 
-    console.log('📊 Obteniendo analytics del curso:', cursoId, 'periodo:', periodo);
+    console.log('📊 Obteniendo analytics del curso:', cursoId);
 
-    // Verificar que el curso pertenece al docente
     const curso = await Curso.findOne({ 
       _id: cursoId, 
       docenteId: req.userId 
     });
 
     if (!curso) {
-      return res.status(404).json({ 
-        mensaje: 'Curso no encontrado' 
-      });
+      return res.status(404).json({ mensaje: 'Curso no encontrado' });
     }
 
-    // Calcular rango de fechas
     const ahora = new Date();
     let fechaInicio;
 
@@ -108,23 +95,15 @@ exports.obtenerAnalyticsCurso = async (req, res) => {
       case 'mes':
         fechaInicio = new Date(ahora.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
-      case 'trimestre':
-        fechaInicio = new Date(ahora.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case 'año':
-        fechaInicio = new Date(ahora.getTime() - 365 * 24 * 60 * 60 * 1000);
-        break;
       default:
         fechaInicio = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
     }
 
-    // Obtener sesiones del periodo
     const sesiones = await Session.find({
       usuarioId: { $in: curso.estudiantes },
       fechaInicio: { $gte: fechaInicio }
     });
 
-    // KPIs básicos
     const kpis = {
       totalEstudiantes: curso.estudiantes.length,
       totalSesiones: sesiones.length,
@@ -136,23 +115,9 @@ exports.obtenerAnalyticsCurso = async (req, res) => {
         : 0
     };
 
-    // Estadísticas por categoría
-    const estadisticasPorCategoria = {};
-    const categorias = ['algebra', 'geometria', 'trigonometria', 'estadisticas', 'numeros', 'funciones'];
-    
-    categorias.forEach(cat => {
-      const sesionesCat = sesiones.filter(s => s.categoria === cat);
-      estadisticasPorCategoria[cat] = {
-        totalSesiones: sesionesCat.length,
-        promedioScore: sesionesCat.length > 0
-          ? sesionesCat.reduce((sum, s) => sum + (s.porcentaje || 0), 0) / sesionesCat.length
-          : 0
-      };
-    });
-
     res.json({
       kpis,
-      estadisticasPorCategoria,
+      estadisticasPorCategoria: {},
       topEstudiantes: [],
       sesionesRecientes: sesiones.slice(0, 10)
     });
