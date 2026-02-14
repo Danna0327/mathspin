@@ -4,6 +4,7 @@ const cors = require("cors");
 const path = require("path");
 const http = require("http");
 const { Server } = require("socket.io");
+const mongoose = require("mongoose");
 
 const connectDB = require("./config/db");
 
@@ -29,6 +30,54 @@ app.use(express.urlencoded({ extended: true }));
 // 🔥 CONECTAR MONGODB
 // ================================
 connectDB();
+
+// ⚠️ MIGRACIÓN UNA VEZ - ELIMINAR DESPUÉS
+async function migrarCursosViejos() {
+  try {
+    // Esperar conexión
+    if (mongoose.connection.readyState !== 1) {
+      await new Promise(resolve => {
+        mongoose.connection.once('open', resolve);
+      });
+    }
+
+    const db = mongoose.connection.db;
+    const cursos = db.collection('cursos');
+    
+    console.log('\n🔄 MIGRANDO CURSOS VIEJOS...');
+    
+    // Encontrar cursos con codigo null pero codigoCurso válido
+    const cursosViejos = await cursos.find({
+      $or: [
+        { codigo: null },
+        { codigo: { $exists: false } }
+      ],
+      codigoCurso: { $exists: true, $ne: null }
+    }).toArray();
+    
+    console.log(`📋 Encontrados ${cursosViejos.length} cursos para migrar`);
+    
+    // Actualizar cada uno
+    for (const curso of cursosViejos) {
+      await cursos.updateOne(
+        { _id: curso._id },
+        { $set: { codigo: curso.codigoCurso } }
+      );
+      console.log(`✅ Migrado: ${curso.nombreCurso} → codigo: ${curso.codigoCurso}`);
+    }
+    
+    console.log('✅ MIGRACIÓN COMPLETADA\n');
+    
+  } catch (error) {
+    console.error('❌ Error en migración:', error.message);
+  }
+}
+
+// Ejecutar migración 2 segundos después de conectar
+setTimeout(() => {
+  migrarCursosViejos();
+}, 2000);
+// FIN MIGRACIÓN
 
 // ================================
 // 🔥 RUTAS API
