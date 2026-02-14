@@ -7,34 +7,29 @@ const Session = require("../models/session.model");
 // ======================================
 exports.crearCurso = async (req, res) => {
   try {
-    const { nombre, paralelo, descripcion, codigo } = req.body;
+    console.log("📥 Body recibido:", req.body);
+    console.log("👤 Usuario:", req.user);
+
     const docenteId = req.user?._id || req.user?.id;
 
     if (!docenteId) {
-      return res.status(401).json({ mensaje: "Usuario no autenticado" });
+      return res.status(401).json({
+        mensaje: "Usuario no autenticado",
+      });
     }
 
-    if (!paralelo) {
+    const { nombre, paralelo, descripcion } = req.body;
+
+    if (!paralelo || paralelo.trim() === "") {
       return res.status(400).json({
         mensaje: "El paralelo es obligatorio",
       });
     }
 
-    // Verificar código si se envía manualmente
-    if (codigo) {
-      const existe = await Curso.findOne({ codigo });
-      if (existe) {
-        return res.status(400).json({
-          mensaje: "El código ya existe",
-        });
-      }
-    }
-
     const nuevoCurso = new Curso({
-      nombre,
-      paralelo,
-      descripcion,
-      codigo, // si no se envía, se genera automáticamente
+      nombre: nombre || "Curso sin nombre",
+      paralelo: paralelo.trim(),
+      descripcion: descripcion || "",
       docenteId,
     });
 
@@ -48,7 +43,7 @@ exports.crearCurso = async (req, res) => {
   } catch (error) {
     console.error("🔥 ERROR crearCurso:", error);
     res.status(500).json({
-      mensaje: "Error al crear curso",
+      mensaje: "Error interno al crear curso",
       error: error.message,
     });
   }
