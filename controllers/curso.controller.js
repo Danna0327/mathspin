@@ -1,38 +1,33 @@
 const Curso = require("../models/curso.model");
-const Usuario = require("../models/user.model");
-const Session = require("../models/session.model");
 
-// ================================
+// ======================================
 // 🔥 CREAR CURSO
-// ================================
+// POST /api/cursos/crear
+// ======================================
 exports.crearCurso = async (req, res) => {
   try {
-    const { paralelo, descripcion, codigo } = req.body;
+    const { nombre, nivel, paralelo } = req.body;
 
-    // 🔥 Tomar ID correctamente desde el token
-    const docenteId = req.user._id || req.user.id;
+    const docenteId = req.user?._id || req.user?.id;
 
     if (!docenteId) {
-      return res.status(401).json({ mensaje: "Usuario no autenticado correctamente" });
+      return res.status(401).json({
+        mensaje: "Usuario no autenticado",
+      });
     }
 
-    if (!paralelo || !descripcion) {
-      return res.status(400).json({ mensaje: "Paralelo y descripción son obligatorios" });
-    }
-
-    // Verificar código duplicado
-    if (codigo) {
-      const cursoExistente = await Curso.findOne({ codigo });
-      if (cursoExistente) {
-        return res.status(400).json({ mensaje: "El código de curso ya existe" });
-      }
+    if (!nombre || !nivel || !paralelo) {
+      return res.status(400).json({
+        mensaje: "Nombre, nivel y paralelo son obligatorios",
+      });
     }
 
     const nuevoCurso = new Curso({
+      nombre,
+      nivel,
       paralelo,
-      descripcion,
-      codigo: codigo || undefined,
       docenteId,
+      estudiantes: [],
     });
 
     await nuevoCurso.save();
@@ -43,7 +38,7 @@ exports.crearCurso = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("🔥 ERROR REAL crearCurso:", error);
+    console.error("🔥 ERROR crearCurso:", error);
     res.status(500).json({
       mensaje: "Error al crear curso",
       error: error.message,
@@ -51,107 +46,168 @@ exports.crearCurso = async (req, res) => {
   }
 };
 
-// ================================
-// 🔥 OBTENER CURSOS DOCENTE
-// ================================
+// ======================================
+// 🔥 OBTENER CURSOS DEL DOCENTE
+// GET /api/cursos/docente
+// ======================================
 exports.obtenerCursosDocente = async (req, res) => {
   try {
-    const docenteId = req.user._id || req.user.id;
+    const docenteId = req.user?._id || req.user?.id;
 
-    const cursos = await Curso.find({ docenteId, activo: true })
-      .populate("docenteId", "nombre apellido")
-      .sort({ createdAt: -1 });
+    if (!docenteId) {
+      return res.status(401).json({
+        mensaje: "Usuario no autenticado",
+      });
+    }
+
+    const cursos = await Curso.find({ docenteId }).sort({ createdAt: -1 });
 
     res.json({ cursos });
 
   } catch (error) {
-    console.error("Error al obtener cursos:", error);
-    res.status(500).json({ mensaje: "Error al obtener cursos" });
+    console.error("🔥 ERROR obtenerCursosDocente:", error);
+    res.status(500).json({
+      mensaje: "Error obteniendo cursos",
+      error: error.message,
+    });
   }
 };
 
-// ================================
-// 🔥 OBTENER ANALYTICS
-// ================================
-exports.obtenerAnalyticsCurso = async (req, res) => {
-  try {
-    const { cursoId } = req.params;
-
-    const estudiantes = await Usuario.find({
-      cursoId,
-      activo: true,
-    }).select("_id nombre apellido");
-
-    const sesiones = await Session.find({
-      usuarioId: { $in: estudiantes.map(e => e._id) }
-    });
-
-    res.json({
-      totalEstudiantes: estudiantes.length,
-      totalSesiones: sesiones.length
-    });
-
-  } catch (error) {
-    console.error("Error analytics:", error);
-    res.status(500).json({ mensaje: "Error al obtener analytics" });
-  }
-};
-
-// ================================
-// 🔥 OBTENER ESTUDIANTES
-// ================================
+// ======================================
+// 🔥 OBTENER ESTUDIANTES DE UN CURSO
+// GET /api/cursos/:cursoId/estudiantes
+// ======================================
 exports.obtenerEstudiantesCurso = async (req, res) => {
   try {
     const { cursoId } = req.params;
 
-    const estudiantes = await Usuario.find({
-      cursoId,
-      rol: "estudiante",
-      activo: true,
-    }).select("nombre apellido nombreUsuario ultimaConexion");
+    const curso = await Curso.findById(cursoId).populate("estudiantes");
 
-    res.json({ estudiantes });
+    if (!curso) {
+      return res.status(404).json({
+        mensaje: "Curso no encontrado",
+      });
+    }
+
+    res.json({
+      estudiantes: curso.estudiantes,
+    });
 
   } catch (error) {
-    console.error("Error al obtener estudiantes:", error);
-    res.status(500).json({ mensaje: "Error al obtener estudiantes" });
+    console.error("🔥 ERROR obtenerEstudiantesCurso:", error);
+    res.status(500).json({
+      mensaje: "Error obteniendo estudiantes",
+      error: error.message,
+    });
   }
 };
 
-// ================================
-// 🔥 ELIMINAR ESTUDIANTE
-// ================================
+// ======================================
+// 🔥 ELIMINAR ESTUDIANTE DE UN CURSO
+// DELETE /api/cursos/estudiante/:estudianteId
+// ======================================
 exports.eliminarEstudianteCurso = async (req, res) => {
   try {
     const { estudianteId } = req.params;
+    const { cursoId } = req.body;
 
-    await Usuario.findByIdAndUpdate(estudianteId, {
-      cursoId: null,
+    const curso = await Curso.findById(cursoId);
+
+    if (!curso) {
+      return res.status(404).json({
+        mensaje: "Curso no encontrado",
+      });
+    }
+
+    curso.estudiantes = curso.estudiantes.filter(
+      (id) => id.toString() !== estudianteId
+    );
+
+    await curso.save();
+
+    res.json({
+      mensaje: "Estudiante eliminado correctamente",
     });
 
-    res.json({ mensaje: "Estudiante eliminado del curso" });
-
   } catch (error) {
-    res.status(500).json({ mensaje: "Error al eliminar estudiante" });
+    console.error("🔥 ERROR eliminarEstudianteCurso:", error);
+    res.status(500).json({
+      mensaje: "Error eliminando estudiante",
+      error: error.message,
+    });
   }
 };
 
-// ================================
-// 🔥 TRANSFERIR ESTUDIANTE
-// ================================
+// ======================================
+// 🔥 TRANSFERIR ESTUDIANTE A OTRO CURSO
+// PUT /api/cursos/estudiante/:estudianteId/transferir
+// ======================================
 exports.transferirEstudiante = async (req, res) => {
   try {
     const { estudianteId } = req.params;
-    const { nuevoCursoId } = req.body;
+    const { cursoOrigenId, cursoDestinoId } = req.body;
 
-    await Usuario.findByIdAndUpdate(estudianteId, {
-      cursoId: nuevoCursoId,
+    const cursoOrigen = await Curso.findById(cursoOrigenId);
+    const cursoDestino = await Curso.findById(cursoDestinoId);
+
+    if (!cursoOrigen || !cursoDestino) {
+      return res.status(404).json({
+        mensaje: "Curso origen o destino no encontrado",
+      });
+    }
+
+    // Quitar del curso origen
+    cursoOrigen.estudiantes = cursoOrigen.estudiantes.filter(
+      (id) => id.toString() !== estudianteId
+    );
+
+    // Agregar al curso destino
+    if (!cursoDestino.estudiantes.includes(estudianteId)) {
+      cursoDestino.estudiantes.push(estudianteId);
+    }
+
+    await cursoOrigen.save();
+    await cursoDestino.save();
+
+    res.json({
+      mensaje: "Estudiante transferido correctamente",
     });
 
-    res.json({ mensaje: "Estudiante transferido" });
-
   } catch (error) {
-    res.status(500).json({ mensaje: "Error al transferir estudiante" });
+    console.error("🔥 ERROR transferirEstudiante:", error);
+    res.status(500).json({
+      mensaje: "Error transfiriendo estudiante",
+      error: error.message,
+    });
   }
 };
 
+// ======================================
+// 🔥 ANALYTICS DEL CURSO
+// GET /api/cursos/:cursoId/analytics
+// ======================================
+exports.obtenerAnalyticsCurso = async (req, res) => {
+  try {
+    const { cursoId } = req.params;
+
+    const curso = await Curso.findById(cursoId);
+
+    if (!curso) {
+      return res.status(404).json({
+        mensaje: "Curso no encontrado",
+      });
+    }
+
+    res.json({
+      totalEstudiantes: curso.estudiantes.length,
+      curso,
+    });
+
+  } catch (error) {
+    console.error("🔥 ERROR obtenerAnalyticsCurso:", error);
+    res.status(500).json({
+      mensaje: "Error obteniendo analytics",
+      error: error.message,
+    });
+  }
+};
