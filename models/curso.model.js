@@ -5,11 +5,10 @@ const cursoSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  codigo: {  // ✅ Campo principal
+  codigoCurso: {  // ✅ Usar codigoCurso (coincide con índice de MongoDB)
     type: String,
     required: true,
     unique: true,
-    sparse: true  // Permite null pero solo uno
   },
   docenteId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -23,21 +22,7 @@ const cursoSchema = new mongoose.Schema({
     },
   ],
 }, { 
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  timestamps: true 
 });
-
-// Virtual para compatibilidad con frontend que usa codigoCurso
-cursoSchema.virtual('codigoCurso').get(function() {
-  return this.codigo;
-});
-
-cursoSchema.virtual('codigoCurso').set(function(value) {
-  this.codigo = value;
-});
-
-// Índice
-cursoSchema.index({ docenteId: 1 });
 
 module.exports = mongoose.model("Curso", cursoSchema);
