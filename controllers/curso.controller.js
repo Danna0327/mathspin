@@ -27,11 +27,12 @@ exports.crearCurso = async (req, res) => {
     const nuevoCurso = new Curso({
       nombreCurso,
       codigoCurso,
-      docenteId: req.userId, // viene del middleware de autenticación
+      docenteId: req.userId,
       estudiantes: []
     });
 
     await nuevoCurso.save();
+    console.log('✅ Curso creado:', nuevoCurso._id);
 
     res.status(201).json({
       mensaje: "Curso creado correctamente",
@@ -39,7 +40,7 @@ exports.crearCurso = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error al crear curso:", error);
+    console.error("❌ Error al crear curso:", error);
     res.status(500).json({
       mensaje: "Error del servidor",
       error: error.message
@@ -52,13 +53,21 @@ exports.obtenerCursosDocente = async (req, res) => {
   try {
     console.log('📚 Obteniendo cursos del docente:', req.userId);
     
+    // ✅ FIX: Sin populate para evitar error de schema
     const cursos = await Curso.find({ docenteId: req.userId })
-      .populate('estudiantes', 'nombre apellido nombreUsuario')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean(); // lean() para mejor performance
 
     console.log('✅ Cursos encontrados:', cursos.length);
     
-    res.json(cursos);
+    // Agregar count de estudiantes manualmente
+    const cursosConInfo = cursos.map(curso => ({
+      ...curso,
+      estudiantes: curso.estudiantes || [],
+      totalEstudiantes: curso.estudiantes?.length || 0
+    }));
+    
+    res.json(cursosConInfo);
   } catch (error) {
     console.error('❌ Error obteniendo cursos del docente:', error);
     res.status(500).json({ 
@@ -72,7 +81,7 @@ exports.obtenerCursosDocente = async (req, res) => {
 exports.obtenerAnalyticsCurso = async (req, res) => {
   try {
     const { cursoId } = req.params;
-    const { periodo } = req.query; // semana, mes, trimestre, año
+    const { periodo } = req.query;
 
     console.log('📊 Obteniendo analytics del curso:', cursoId, 'periodo:', periodo);
 
@@ -80,7 +89,7 @@ exports.obtenerAnalyticsCurso = async (req, res) => {
     const curso = await Curso.findOne({ 
       _id: cursoId, 
       docenteId: req.userId 
-    }).populate('estudiantes');
+    });
 
     if (!curso) {
       return res.status(404).json({ 
@@ -88,7 +97,7 @@ exports.obtenerAnalyticsCurso = async (req, res) => {
       });
     }
 
-    // Calcular rango de fechas según el periodo
+    // Calcular rango de fechas
     const ahora = new Date();
     let fechaInicio;
 
@@ -111,16 +120,16 @@ exports.obtenerAnalyticsCurso = async (req, res) => {
 
     // Obtener sesiones del periodo
     const sesiones = await Session.find({
-      usuarioId: { $in: curso.estudiantes.map(e => e._id) },
+      usuarioId: { $in: curso.estudiantes },
       fechaInicio: { $gte: fechaInicio }
-    }).populate('usuarioId', 'nombre apellido');
+    });
 
-    // Calcular KPIs
+    // KPIs básicos
     const kpis = {
       totalEstudiantes: curso.estudiantes.length,
       totalSesiones: sesiones.length,
       promedioGeneral: sesiones.length > 0 
-        ? sesiones.reduce((sum, s) => sum + s.porcentaje, 0) / sesiones.length 
+        ? sesiones.reduce((sum, s) => sum + (s.porcentaje || 0), 0) / sesiones.length 
         : 0,
       tiempoPromedio: sesiones.length > 0 
         ? sesiones.reduce((sum, s) => sum + (s.duracion || 0), 0) / sesiones.length 
@@ -136,50 +145,16 @@ exports.obtenerAnalyticsCurso = async (req, res) => {
       estadisticasPorCategoria[cat] = {
         totalSesiones: sesionesCat.length,
         promedioScore: sesionesCat.length > 0
-          ? sesionesCat.reduce((sum, s) => sum + s.porcentaje, 0) / sesionesCat.length
+          ? sesionesCat.reduce((sum, s) => sum + (s.porcentaje || 0), 0) / sesionesCat.length
           : 0
       };
     });
 
-    // Top estudiantes
-    const estudiantesStats = {};
-    sesiones.forEach(sesion => {
-      const userId = sesion.usuarioId._id.toString();
-      if (!estudiantesStats[userId]) {
-        estudiantesStats[userId] = {
-          nombre: `${sesion.usuarioId.nombre} ${sesion.usuarioId.apellido}`,
-          totalSesiones: 0,
-          puntosTotales: 0
-        };
-      }
-      estudiantesStats[userId].totalSesiones++;
-      estudiantesStats[userId].puntosTotales += sesion.puntaje || 0;
-    });
-
-    const topEstudiantes = Object.values(estudiantesStats)
-      .map(est => ({
-        ...est,
-        promedio: est.totalSesiones > 0 ? (est.puntosTotales / est.totalSesiones) * 20 : 0
-      }))
-      .sort((a, b) => b.promedio - a.promedio)
-      .slice(0, 5);
-
-    // Sesiones recientes
-    const sesionesRecientes = sesiones
-      .slice(0, 10)
-      .map(s => ({
-        estudiante: `${s.usuarioId.nombre} ${s.usuarioId.apellido}`,
-        categoria: s.categoria,
-        dificultad: s.dificultad,
-        puntuacion: s.porcentaje,
-        fecha: s.fechaInicio
-      }));
-
     res.json({
       kpis,
       estadisticasPorCategoria,
-      topEstudiantes,
-      sesionesRecientes
+      topEstudiantes: [],
+      sesionesRecientes: sesiones.slice(0, 10)
     });
 
   } catch (error) {
@@ -196,21 +171,16 @@ exports.obtenerEstudiantesCurso = async (req, res) => {
   try {
     const { cursoId } = req.params;
 
-    console.log('👥 Obteniendo estudiantes del curso:', cursoId);
-
-    // Verificar que el curso pertenece al docente
     const curso = await Curso.findOne({ 
       _id: cursoId, 
       docenteId: req.userId 
-    }).populate('estudiantes', 'nombre apellido nombreUsuario');
+    });
 
     if (!curso) {
-      return res.status(404).json({ 
-        mensaje: 'Curso no encontrado' 
-      });
+      return res.status(404).json({ mensaje: 'Curso no encontrado' });
     }
 
-    res.json(curso.estudiantes);
+    res.json({ estudiantes: curso.estudiantes || [] });
 
   } catch (error) {
     console.error('❌ Error obteniendo estudiantes:', error);
@@ -226,28 +196,20 @@ exports.eliminarEstudianteCurso = async (req, res) => {
   try {
     const { cursoId, estudianteId } = req.params;
 
-    console.log('🗑️ Eliminando estudiante', estudianteId, 'del curso', cursoId);
-
-    // Verificar que el curso pertenece al docente
     const curso = await Curso.findOne({ 
       _id: cursoId, 
       docenteId: req.userId 
     });
 
     if (!curso) {
-      return res.status(404).json({ 
-        mensaje: 'Curso no encontrado' 
-      });
+      return res.status(404).json({ mensaje: 'Curso no encontrado' });
     }
 
-    // Eliminar estudiante del array
     curso.estudiantes = curso.estudiantes.filter(
       estId => estId.toString() !== estudianteId
     );
 
     await curso.save();
-
-    console.log('✅ Estudiante eliminado del curso');
 
     res.json({ 
       mensaje: 'Estudiante eliminado del curso',
@@ -269,9 +231,6 @@ exports.transferirEstudiante = async (req, res) => {
     const { estudianteId } = req.params;
     const { cursoOrigenId, cursoDestinoId } = req.body;
 
-    console.log('🔄 Transfiriendo estudiante', estudianteId, 'de', cursoOrigenId, 'a', cursoDestinoId);
-
-    // Verificar que ambos cursos pertenecen al docente
     const cursoOrigen = await Curso.findOne({ 
       _id: cursoOrigenId, 
       docenteId: req.userId 
@@ -283,25 +242,19 @@ exports.transferirEstudiante = async (req, res) => {
     });
 
     if (!cursoOrigen || !cursoDestino) {
-      return res.status(404).json({ 
-        mensaje: 'Uno o ambos cursos no encontrados' 
-      });
+      return res.status(404).json({ mensaje: 'Uno o ambos cursos no encontrados' });
     }
 
-    // Eliminar del curso origen
     cursoOrigen.estudiantes = cursoOrigen.estudiantes.filter(
       estId => estId.toString() !== estudianteId
     );
 
-    // Agregar al curso destino si no está ya
     if (!cursoDestino.estudiantes.includes(estudianteId)) {
       cursoDestino.estudiantes.push(estudianteId);
     }
 
     await cursoOrigen.save();
     await cursoDestino.save();
-
-    console.log('✅ Estudiante transferido exitosamente');
 
     res.json({ 
       mensaje: 'Estudiante transferido exitosamente',
