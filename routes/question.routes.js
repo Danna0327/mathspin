@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Question = require("../models/question.model");
+const questionController = require("../controllers/question.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
 // ================================
@@ -9,63 +9,22 @@ const authMiddleware = require("../middlewares/auth.middleware");
 router.use(authMiddleware);
 
 // ================================
-// 🔥 CREAR PREGUNTA
-// POST /api/questions
+// 🔥 RUTAS DE PREGUNTAS
 // ================================
-router.post("/", async (req, res) => {
-  try {
-    const { cursoId, categoria, dificultad, pregunta, opciones, respuestaCorrecta } = req.body;
 
-    if (!cursoId || !categoria || !dificultad || !pregunta || !opciones || respuestaCorrecta === undefined) {
-      return res.status(400).json({ mensaje: "Faltan datos obligatorios" });
-    }
+// Crear pregunta
+router.post("/", questionController.crearPregunta);
 
-    const nuevaPregunta = new Question({
-      cursoId,
-      categoria,
-      dificultad,
-      pregunta,
-      opciones,
-      respuestaCorrecta,
-    });
+// Obtener preguntas del docente
+router.get("/", questionController.obtenerPreguntasDocente);
 
-    await nuevaPregunta.save();
+// Obtener preguntas por categoría y dificultad (para el juego)
+router.get("/category/:categoria", questionController.getByCategoryAndDifficulty);
 
-    res.status(201).json({
-      mensaje: "Pregunta creada correctamente",
-      pregunta: nuevaPregunta,
-    });
+// Actualizar pregunta
+router.put("/:id", questionController.actualizarPregunta);
 
-  } catch (error) {
-    console.error("❌ Error creando pregunta:", error);
-    res.status(500).json({ mensaje: "Error interno del servidor" });
-  }
-});
-
-// ================================
-// 🔥 OBTENER PREGUNTAS POR CATEGORÍA
-// GET /api/questions/category/:category?difficulty=facil
-// ================================
-router.get("/category/:category", async (req, res) => {
-  try {
-    const { category } = req.params;
-    const { difficulty } = req.query;
-
-    const filter = { categoria: category };
-
-    if (difficulty) {
-      filter.dificultad = difficulty;
-    }
-
-    const preguntas = await Question.find(filter);
-
-    res.json({ preguntas });
-
-  } catch (error) {
-    console.error("❌ Error obteniendo preguntas:", error);
-    res.status(500).json({ mensaje: "Error obteniendo preguntas" });
-  }
-});
+// Eliminar pregunta
+router.delete("/:id", questionController.eliminarPregunta);
 
 module.exports = router;
-
