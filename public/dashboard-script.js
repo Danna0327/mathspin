@@ -292,13 +292,44 @@ async function cargarCursos() {
     
     cursosActuales = await res.json();
     console.log('✅ Cursos:', cursosActuales.length);
+    console.log('📋 Cursos recibidos:', cursosActuales);
     
+    // Actualizar tanto el grid como el selector
     mostrarCursos(cursosActuales);
+    actualizarSelectorCursos(cursosActuales);
     
   } catch (error) {
     console.error('❌ Error cursos:', error);
     mostrarCursos([]);
+    actualizarSelectorCursos([]);
   }
+}
+
+// ========== ACTUALIZAR SELECTOR DE CURSOS ==========
+function actualizarSelectorCursos(cursos) {
+  const selector = document.getElementById("cursoSelect");
+  
+  if (!selector) {
+    console.warn('⚠️ Selector de cursos no encontrado');
+    return;
+  }
+  
+  console.log('📝 Actualizando selector con', cursos.length, 'cursos');
+  
+  // Limpiar opciones existentes
+  selector.innerHTML = '<option value="">Seleccionar curso...</option>';
+  
+  // Agregar cada curso
+  cursos.forEach(curso => {
+    const codigo = curso.codigoCurso || curso.codigo || 'SIN-CODIGO';
+    const option = document.createElement('option');
+    option.value = curso._id;
+    option.textContent = `${curso.nombreCurso} - ${codigo}`;
+    selector.appendChild(option);
+    console.log('➕ Opción agregada:', option.textContent);
+  });
+  
+  console.log('✅ Selector actualizado con', selector.options.length - 1, 'cursos');
 }
 
 // ========== MOSTRAR CURSOS ==========
