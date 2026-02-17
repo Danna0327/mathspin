@@ -653,11 +653,14 @@ async function saveGameSession(sessionData) {
 }
 
 function showResults() {
+  console.log('🏁 === MOSTRANDO RESULTADOS ===');
+  
   const percentage = Math.round((score / currentQuestions.length) * 100);
   const sessionEndTime = new Date();
-  const durationSeconds = Math.round((sessionEndTime - sessionStartTime) / 1000); // ← en segundos
+  const durationSeconds = Math.round((sessionEndTime - sessionStartTime) / 1000);
 
-  console.log(`🏁 Resultados: ${score}/${currentQuestions.length} (${percentage}%)`);
+  console.log(`📊 Resultados: ${score}/${currentQuestions.length} (${percentage}%)`);
+  console.log(`⏱️ Duración: ${durationSeconds} segundos`);
 
   const sessionData = {
     usuarioId: currentUser?.id,
@@ -666,18 +669,28 @@ function showResults() {
     puntaje: score,
     totalPreguntas: currentQuestions.length,
     porcentaje: percentage,
-    duracion: durationSeconds, // ← guardamos en segundos
+    duracion: durationSeconds,
     fechaInicio: sessionStartTime,
     fechaFin: sessionEndTime,
   };
 
+  console.log('💾 Guardando sesión:', sessionData);
   saveGameSession(sessionData);
 
+  // Actualizar elementos de la pantalla de resultados
   const finalScore = document.getElementById("finalScore");
   const pctEl = document.getElementById("percentage");
   const catEl = document.getElementById("resultCategory");
   const diffEl = document.getElementById("resultDifficulty");
   const durEl = document.getElementById("sessionDuration");
+
+  console.log('🔍 Elementos encontrados:', {
+    finalScore: !!finalScore,
+    pctEl: !!pctEl,
+    catEl: !!catEl,
+    diffEl: !!diffEl,
+    durEl: !!durEl
+  });
 
   if (finalScore) finalScore.textContent = `${score}/${currentQuestions.length}`;
   if (pctEl) pctEl.textContent = `${percentage}%`;
@@ -688,9 +701,20 @@ function showResults() {
   const diffNames = { facil: "Básico", intermedio: "Medio", dificil: "Avanzado" };
   if (diffEl) diffEl.textContent = diffNames[currentDifficulty] || currentDifficulty;
 
-  if (durEl) durEl.textContent = `${duration} min`;
+  // Formato legible para duración
+  let textoTiempo;
+  if (durationSeconds < 60) {
+    textoTiempo = durationSeconds + 's';
+  } else {
+    const minutos = Math.floor(durationSeconds / 60);
+    const segs = durationSeconds % 60;
+    textoTiempo = segs > 0 ? `${minutos}m ${segs}s` : `${minutos}m`;
+  }
+  if (durEl) durEl.textContent = textoTiempo;
 
+  console.log('📺 Mostrando pantalla de resultados...');
   showResultsScreen();
+  console.log('✅ Pantalla de resultados mostrada');
 }
 
 /* =========================================================
