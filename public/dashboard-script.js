@@ -557,7 +557,7 @@ function mostrarAnalyticsVacio(mensaje) {
   document.getElementById('totalEstudiantes').textContent = '0';
   document.getElementById('totalSesiones').textContent = '0';
   document.getElementById('promedioGeneral').textContent = '0%';
-  document.getElementById('tiempoPromedio').textContent = '0min';
+  document.getElementById('tiempoPromedio').textContent = '0s';
 
   // Top estudiantes vacío
   const topEl = document.getElementById('topEstudiantes');
@@ -584,7 +584,22 @@ function renderizarAnalytics(data) {
   document.getElementById('totalEstudiantes').textContent = kpis.totalEstudiantes;
   document.getElementById('totalSesiones').textContent = kpis.totalSesiones;
   document.getElementById('promedioGeneral').textContent = kpis.promedioGeneral + '%';
-  document.getElementById('tiempoPromedio').textContent = kpis.tiempoPromedio + 'min';
+  
+  // ✅ Formato legible para tiempo promedio
+  const segundos = kpis.tiempoPromedio;
+  let textoTiempo;
+  if (segundos < 60) {
+    textoTiempo = segundos + 's';
+  } else if (segundos < 3600) {
+    const minutos = Math.floor(segundos / 60);
+    const segs = segundos % 60;
+    textoTiempo = segs > 0 ? `${minutos}m ${segs}s` : `${minutos}m`;
+  } else {
+    const horas = Math.floor(segundos / 3600);
+    const mins = Math.floor((segundos % 3600) / 60);
+    textoTiempo = mins > 0 ? `${horas}h ${mins}m` : `${horas}h`;
+  }
+  document.getElementById('tiempoPromedio').textContent = textoTiempo;
 
   // ── Gráfico de categorías ──
   const canvas = document.getElementById('categoriaChart');
