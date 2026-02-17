@@ -191,14 +191,25 @@
                                     <option value="F">F</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label for="codigoCurso">
-                                    <i class="fas fa-key"></i>
-                                    Código del Curso (Opcional)
-                                </label>
-                                <input type="text" id="codigoCurso" name="codigoCurso" placeholder="Código proporcionado por tu docente">
-                                <small><i class="fas fa-info-circle"></i> Déjalo vacío si no tienes código</small>
-                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label for="codigoCurso" style="font-weight: 700; color: #667eea;">
+                                <i class="fas fa-key"></i>
+                                Código del Curso
+                            </label>
+                            <input 
+                                type="text" 
+                                id="codigoCurso" 
+                                name="codigoCurso" 
+                                placeholder="Ej: AB1234 — Pídelo a tu docente"
+                                maxlength="10"
+                                style="text-transform: uppercase; letter-spacing: 3px; font-weight: bold; font-size: 1.1em;"
+                                oninput="this.value = this.value.toUpperCase()"
+                            >
+                            <small style="color: #667eea;">
+                                <i class="fas fa-info-circle"></i> 
+                                Tu docente te dará este código. Puedes ingresarlo después si no lo tienes.
+                            </small>
                         </div>
                     </div>
                     
