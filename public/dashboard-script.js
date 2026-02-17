@@ -56,6 +56,7 @@ function cargarDatosTab(tab) {
       cargarPreguntas();
       break;
     case 'analytics':
+      cargarAnalytics();
       break;
     case 'estudiantes':
       cargarEstudiantes();
@@ -128,6 +129,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Cargar datos iniciales
   cargarCursos();
   cargarPreguntas();
+  cargarAnalytics(); // ← cargar analytics al inicio
+
+  // Listener selector de curso → recargar analytics
+  const cursoSelect = document.getElementById('cursoSelect');
+  if (cursoSelect) {
+    cursoSelect.addEventListener('change', () => {
+      cargarAnalytics();
+    });
+  }
+
+  // Listener periodo → recargar analytics
+  const periodoSelect = document.getElementById('periodoSelect');
+  if (periodoSelect) {
+    periodoSelect.addEventListener('change', () => {
+      cargarAnalytics();
+    });
+  }
   
   // Nombre usuario
   const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
@@ -497,6 +515,171 @@ function generarCodigo() {
     codigo += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return codigo;
+}
+
+// ========== ANALYTICS ==========
+let chartInstance = null; // Para destruir el chart anterior
+
+async function cargarAnalytics() {
+  const cursoSelect = document.getElementById('cursoSelect');
+  const periodoSelect = document.getElementById('periodoSelect');
+  const cursoId = cursoSelect?.value;
+  const periodo = periodoSelect?.value || 'mes';
+
+  // Sin curso seleccionado → mostrar mensaje
+  if (!cursoId) {
+    mostrarAnalyticsVacio('Selecciona un curso en el menú superior para ver las estadísticas');
+    return;
+  }
+
+  try {
+    console.log(`📊 Cargando analytics: curso=${cursoId}, periodo=${periodo}`);
+
+    const res = await fetch(`${API_BASE_URL}/cursos/${cursoId}/analytics?periodo=${periodo}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+
+    const data = await res.json();
+    console.log('✅ Analytics recibidos:', data);
+
+    renderizarAnalytics(data);
+
+  } catch (error) {
+    console.error('❌ Error analytics:', error);
+    mostrarAnalyticsVacio('Error al cargar estadísticas. Intenta de nuevo.');
+  }
+}
+
+function mostrarAnalyticsVacio(mensaje) {
+  // KPIs en cero
+  document.getElementById('totalEstudiantes').textContent = '0';
+  document.getElementById('totalSesiones').textContent = '0';
+  document.getElementById('promedioGeneral').textContent = '0%';
+  document.getElementById('tiempoPromedio').textContent = '0min';
+
+  // Top estudiantes vacío
+  const topEl = document.getElementById('topEstudiantes');
+  if (topEl) topEl.innerHTML = `
+    <div style="text-align:center; padding:30px; color:#aaa;">
+      <p>${mensaje}</p>
+    </div>
+  `;
+
+  // Tabla vacía
+  const tbody = document.querySelector('#sesionesTable tbody');
+  if (tbody) tbody.innerHTML = `
+    <tr><td colspan="5" style="text-align:center; padding:20px; color:#aaa;">${mensaje}</td></tr>
+  `;
+
+  // Limpiar chart
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+}
+
+function renderizarAnalytics(data) {
+  const { kpis, rendimientoCategorias, topEstudiantes, sesionesRecientes } = data;
+
+  // ── KPIs ──
+  document.getElementById('totalEstudiantes').textContent = kpis.totalEstudiantes;
+  document.getElementById('totalSesiones').textContent = kpis.totalSesiones;
+  document.getElementById('promedioGeneral').textContent = kpis.promedioGeneral + '%';
+  document.getElementById('tiempoPromedio').textContent = kpis.tiempoPromedio + 'min';
+
+  // ── Gráfico de categorías ──
+  const canvas = document.getElementById('categoriaChart');
+  if (canvas) {
+    if (chartInstance) chartInstance.destroy();
+
+    if (rendimientoCategorias.length === 0) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#aaa';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sin datos en este periodo', canvas.width / 2, canvas.height / 2);
+    } else {
+      chartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: rendimientoCategorias.map(c => c.nombre),
+          datasets: [{
+            label: 'Promedio (%)',
+            data: rendimientoCategorias.map(c => c.promedio),
+            backgroundColor: [
+              'rgba(102,126,234,0.7)',
+              'rgba(118,75,162,0.7)',
+              'rgba(52,211,153,0.7)',
+              'rgba(251,191,36,0.7)',
+              'rgba(239,68,68,0.7)',
+            ],
+            borderRadius: 8,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${ctx.parsed.y}% promedio`
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+          }
+        }
+      });
+    }
+  }
+
+  // ── Top 5 Estudiantes ──
+  const topEl = document.getElementById('topEstudiantes');
+  if (topEl) {
+    if (topEstudiantes.length === 0) {
+      topEl.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Sin actividad en este periodo</div>';
+    } else {
+      const medallas = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+      topEl.innerHTML = topEstudiantes.map((est, i) => `
+        <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #f0f0f0;">
+          <span style="font-size:1.4em;">${medallas[i]}</span>
+          <div style="flex:1;">
+            <p style="margin:0; font-weight:600; color:#333;">${est.nombre} ${est.apellido}</p>
+            <p style="margin:2px 0 0; font-size:0.8em; color:#888;">@${est.nombreUsuario} · ${est.sesiones} sesión${est.sesiones !== 1 ? 'es' : ''}</p>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:1.1em; font-weight:700; color:#667eea;">${est.promedio}%</span>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // ── Sesiones Recientes ──
+  const tbody = document.querySelector('#sesionesTable tbody');
+  if (tbody) {
+    if (sesionesRecientes.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#aaa;">Sin sesiones en este periodo</td></tr>';
+    } else {
+      tbody.innerHTML = sesionesRecientes.map(s => {
+        const fecha = new Date(s.createdAt).toLocaleDateString('es-EC', {
+          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        const colorPct = s.porcentaje >= 70 ? '#10b981' : s.porcentaje >= 40 ? '#f59e0b' : '#ef4444';
+        return `
+          <tr>
+            <td>${s.nombreEstudiante}</td>
+            <td style="text-transform:capitalize;">${s.categoria || '-'}</td>
+            <td style="text-transform:capitalize;">${s.dificultad || '-'}</td>
+            <td style="font-weight:700; color:${colorPct};">${s.porcentaje || 0}%</td>
+            <td style="font-size:0.85em; color:#888;">${fecha}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
 }
 
 function cerrarSesion() {
