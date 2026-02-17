@@ -56,10 +56,9 @@ function cargarDatosTab(tab) {
       cargarPreguntas();
       break;
     case 'analytics':
-      // cargarAnalytics();
       break;
     case 'estudiantes':
-      // cargarEstudiantes();
+      cargarEstudiantes();
       break;
   }
 }
@@ -503,6 +502,199 @@ function generarCodigo() {
 function cerrarSesion() {
   localStorage.clear();
   window.location.href = "/";
+}
+
+// ========== CARGAR ESTUDIANTES ==========
+async function cargarEstudiantes() {
+  try {
+    console.log('👥 Cargando estudiantes...');
+
+    const container = document.getElementById("estudiantesGrid");
+    if (container) {
+      container.innerHTML = `
+        <div style="grid-column:1/-1; text-align:center; padding:40px; color:white;">
+          <p style="font-size:18px;">⏳ Cargando estudiantes...</p>
+        </div>
+      `;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/cursos/estudiantes`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+
+    const data = await res.json();
+    console.log('✅ Datos de estudiantes recibidos:', data);
+
+    mostrarEstudiantes(data);
+
+  } catch (error) {
+    console.error('❌ Error cargando estudiantes:', error);
+    const container = document.getElementById("estudiantesGrid");
+    if (container) {
+      container.innerHTML = `
+        <div style="grid-column:1/-1; text-align:center; padding:40px; color:white;">
+          <p style="font-size:18px;">❌ Error al cargar estudiantes</p>
+          <button onclick="cargarEstudiantes()" style="margin-top:10px; padding:8px 16px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer;">
+            🔄 Reintentar
+          </button>
+        </div>
+      `;
+    }
+  }
+}
+
+// ========== MOSTRAR ESTUDIANTES ==========
+function mostrarEstudiantes(data) {
+  const container = document.getElementById("estudiantesGrid");
+  if (!container) return;
+
+  const cursos = data.cursos || [];
+  const totalEstudiantes = data.totalEstudiantes || 0;
+
+  // Sin cursos
+  if (cursos.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column:1/-1; text-align:center; padding:50px; color:white;">
+        <div style="font-size:3em; margin-bottom:15px;">👥</div>
+        <p style="font-size:1.3em; font-weight:600;">No hay cursos aún</p>
+        <p style="opacity:0.7; margin-top:8px;">Crea un curso y comparte el código con tus estudiantes</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Header con total
+  let html = `
+    <div style="grid-column:1/-1; margin-bottom:10px;">
+      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:15px 20px; display:flex; align-items:center; gap:15px;">
+        <span style="font-size:2em;">👨‍🎓</span>
+        <div>
+          <p style="color:white; font-size:1.1em; font-weight:700; margin:0;">
+            ${totalEstudiantes} estudiante${totalEstudiantes !== 1 ? 's' : ''} en total
+          </p>
+          <p style="color:rgba(255,255,255,0.6); font-size:0.85em; margin:4px 0 0 0;">
+            ${cursos.length} curso${cursos.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Una tarjeta por curso
+  cursos.forEach(curso => {
+    const sinEstudiantes = curso.estudiantes.length === 0;
+
+    html += `
+      <div style="
+        grid-column: 1/-1;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      ">
+        <!-- Encabezado del curso -->
+        <div style="
+          background: linear-gradient(135deg, rgba(102,126,234,0.4) 0%, rgba(118,75,162,0.4) 100%);
+          padding: 15px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        ">
+          <div>
+            <h3 style="color:white; margin:0; font-size:1.1em;">${curso.nombreCurso}</h3>
+            <span style="
+              background: rgba(255,255,255,0.2); color:white;
+              padding: 2px 10px; border-radius:20px; font-size:0.8em;
+              font-weight:700; letter-spacing:2px; font-family:monospace;
+            ">${curso.codigo}</span>
+          </div>
+          <div style="
+            background: rgba(255,255,255,0.2); color:white;
+            padding: 5px 14px; border-radius:20px; font-size:0.85em; font-weight:600;
+          ">
+            👥 ${curso.totalEstudiantes} estudiante${curso.totalEstudiantes !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        <!-- Lista de estudiantes -->
+        <div style="padding: 15px 20px;">
+          ${sinEstudiantes ? `
+            <div style="text-align:center; padding:20px; color:rgba(255,255,255,0.5);">
+              <p style="margin:0;">Ningún estudiante inscrito aún</p>
+              <p style="margin:5px 0 0 0; font-size:0.85em;">Comparte el código <strong>${curso.codigo}</strong> para que se unan</p>
+            </div>
+          ` : `
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:10px;">
+              ${curso.estudiantes.map(est => `
+                <div style="
+                  background: rgba(255,255,255,0.08);
+                  border-radius: 10px; padding: 12px 15px;
+                  display: flex; align-items: center; gap: 12px;
+                ">
+                  <!-- Avatar -->
+                  <div style="
+                    width:42px; height:42px; border-radius:50%;
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:1.1em; font-weight:700; color:white; flex-shrink:0;
+                  ">
+                    ${(est.nombre || '?')[0].toUpperCase()}${(est.apellido || '')[0]?.toUpperCase() || ''}
+                  </div>
+                  <!-- Info -->
+                  <div style="flex:1; min-width:0;">
+                    <p style="color:white; margin:0; font-weight:600; font-size:0.95em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                      ${est.nombre} ${est.apellido}
+                    </p>
+                    <p style="color:rgba(255,255,255,0.6); margin:2px 0 0 0; font-size:0.8em;">
+                      @${est.nombreUsuario}
+                      ${est.paralelo !== '-' ? ` · Paralelo ${est.paralelo}` : ''}
+                    </p>
+                  </div>
+                  <!-- Botón eliminar -->
+                  <button
+                    onclick="eliminarEstudiante('${curso._id}', '${est._id}', '${est.nombre} ${est.apellido}')"
+                    title="Eliminar del curso"
+                    style="
+                      background: rgba(239,68,68,0.2); border: none; color: #fca5a5;
+                      width:30px; height:30px; border-radius:8px; cursor:pointer;
+                      font-size:0.9em; flex-shrink:0;
+                      display:flex; align-items:center; justify-content:center;
+                    "
+                  >✕</button>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+// ========== ELIMINAR ESTUDIANTE DE UN CURSO ==========
+async function eliminarEstudiante(cursoId, estudianteId, nombre) {
+  if (!confirm(`¿Eliminar a "${nombre}" del curso?`)) return;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/cursos/${cursoId}/estudiante/${estudianteId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+
+    console.log('✅ Estudiante eliminado');
+    cargarEstudiantes(); // Recargar la lista
+
+  } catch (error) {
+    console.error('❌ Error eliminando estudiante:', error);
+    alert('Error al eliminar estudiante');
+  }
 }
 
 console.log('✅ Script cargado');
