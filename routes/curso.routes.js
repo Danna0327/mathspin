@@ -7,5 +7,7 @@ router.use(authMiddleware);
 
 router.post("/crear", cursoController.crearCurso);
 router.get("/docente", cursoController.obtenerCursosDocente);
+router.get("/estudiantes", cursoController.obtenerEstudiantesDocente);
+router.delete("/:cursoId/estudiante/:estudianteId", cursoController.eliminarEstudianteCurso);
 
 module.exports = router;
