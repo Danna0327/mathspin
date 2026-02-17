@@ -923,6 +923,25 @@ document.addEventListener("DOMContentLoaded", () => {
   testDatabaseConnection();
 });
 
+// ========== MOSTRAR/OCULTAR CAMPOS DE ESTUDIANTE ==========
+function toggleStudentFields() {
+  const tipoUsuario = document.getElementById("tipoUsuario")?.value;
+  const studentFields = document.getElementById("studentFields");
+  
+  if (!studentFields) return;
+  
+  if (tipoUsuario === "estudiante") {
+    studentFields.style.display = "block";
+  } else {
+    studentFields.style.display = "none";
+    // Limpiar campos al ocultar
+    const codigoInput = document.getElementById("codigoCurso");
+    const paraleloInput = document.getElementById("paralelo");
+    if (codigoInput) codigoInput.value = "";
+    if (paraleloInput) paraleloInput.value = "";
+  }
+}
+
 // ========== PANTALLA DE CÓDIGO DE CURSO ==========
 function mostrarPantallaCodigo(token, nombreUsuario) {
   // Crear overlay
