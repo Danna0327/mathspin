@@ -1,4 +1,4 @@
- // ========== CONFIGURACIÓN ==========
+// ========== CONFIGURACIÓN ==========
 const token = localStorage.getItem("token");
 
 if (!token) {
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (crearCursoBtn) crearCursoBtn.onclick = () => abrirModal("modalCrearCurso");
   if (nuevoCursoBtn) nuevoCursoBtn.onclick = () => abrirModal("modalCrearCurso");
   if (nuevaPreguntaBtn) nuevaPreguntaBtn.onclick = () => abrirModal("modalPregunta");
-  if (invitarBtn) invitarBtn.onclick = () => abrirModal("modalInvitar");
+  if (invitarBtn) invitarBtn.onclick = () => abrirModalInvitar();
   if (logoutBtn) logoutBtn.onclick = cerrarSesion;
   if (copiarBtn) copiarBtn.onclick = copiarCodigoCurso;
   
@@ -451,6 +451,44 @@ function copiarCodigoCurso() {
   if (input?.value) {
     copiarCodigo(input.value);
   }
+}
+
+// ========== MODAL INVITAR ESTUDIANTE ==========
+function abrirModalInvitar() {
+  // Llenar el selector de cursos en el modal
+  const selectCurso = document.getElementById("selectorCursoInvitar");
+  if (selectCurso) {
+    selectCurso.innerHTML = '<option value="">Selecciona un curso...</option>';
+    cursosActuales.forEach(curso => {
+      const codigo = curso.codigoCurso || curso.codigo || '';
+      const opt = document.createElement('option');
+      opt.value = codigo;
+      opt.textContent = `${curso.nombreCurso} (${codigo})`;
+      selectCurso.appendChild(opt);
+    });
+
+    // Al cambiar curso, mostrar su código
+    selectCurso.onchange = () => {
+      const codigo = selectCurso.value;
+      const inputCodigo = document.getElementById("codigoCurso");
+      if (inputCodigo) inputCodigo.value = codigo;
+      const infoEl = document.getElementById("cursoSeleccionadoInfo");
+      if (infoEl) {
+        if (codigo) {
+          infoEl.innerHTML = `
+            <div style="background: rgba(102,126,234,0.15); border: 2px solid #667eea; border-radius: 10px; padding: 15px; margin-top: 15px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-weight: 600; color: #333;">Código para compartir:</p>
+              <div style="font-size: 2em; font-weight: 900; letter-spacing: 6px; color: #667eea; font-family: monospace;">${codigo}</div>
+              <p style="margin: 10px 0 0 0; font-size: 0.85em; color: #666;">El estudiante debe ingresar este código al registrarse o iniciar sesión</p>
+            </div>
+          `;
+        } else {
+          infoEl.innerHTML = '';
+        }
+      }
+    };
+  }
+  abrirModal("modalInvitar");
 }
 
 function generarCodigo() {
