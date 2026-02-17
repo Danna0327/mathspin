@@ -163,11 +163,12 @@
                         <div class="filtros">
                             <select id="categoriaFiltro">
                                 <option value="todas">Todas las categorías</option>
-                                <option value="aritmetica">Aritmética</option>
                                 <option value="algebra">Álgebra</option>
                                 <option value="geometria">Geometría</option>
+                                <option value="estadistica">Estadística</option>
+                                <option value="numeros">Números</option>
+                                <option value="funciones">Funciones</option>
                                 <option value="trigonometria">Trigonometría</option>
-                                <option value="calculo">Cálculo</option>
                             </select>
                             <select id="dificultadFiltro">
                                 <option value="todas">Todas las dificultades</option>
@@ -250,11 +251,12 @@
                         <label for="categoriaPregunta">Categoría:</label>
                         <select id="categoriaPregunta" required>
                             <option value="">Seleccionar...</option>
-                            <option value="aritmetica">Aritmética</option>
                             <option value="algebra">Álgebra</option>
                             <option value="geometria">Geometría</option>
+                            <option value="estadistica">Estadística</option>
+                            <option value="numeros">Números</option>
+                            <option value="funciones">Funciones</option>
                             <option value="trigonometria">Trigonometría</option>
-                            <option value="calculo">Cálculo</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -306,41 +308,18 @@
     <div id="modalInvitar" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>🎓 Invitar Estudiantes</h3>
+                <h3>Invitar Estudiantes</h3>
                 <span class="close">&times;</span>
             </div>
             <div class="modal-body">
-                <p style="color: #555; margin-bottom: 15px;">Selecciona el curso y comparte el código con tus estudiantes:</p>
-
-                <!-- Selector de curso -->
-                <div style="margin-bottom: 15px;">
-                    <label style="font-weight: 600; color: #333; display: block; margin-bottom: 6px;">Curso:</label>
-                    <select id="selectorCursoInvitar" style="width: 100%; padding: 10px 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 15px; background: white;">
-                        <option value="">Selecciona un curso...</option>
-                    </select>
-                </div>
-
-                <!-- Código generado -->
-                <div class="codigo-container" style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="codigoCurso" readonly placeholder="Selecciona un curso arriba"
-                        style="flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 18px; font-weight: bold; letter-spacing: 4px; text-align: center; background: #f9f9f9; color: #333;">
-                    <button id="copiarCodigoBtn" class="btn-primary" style="white-space: nowrap;">
+                <p>Comparte este código con tus estudiantes para que se unan al curso:</p>
+                <div class="codigo-container">
+                    <input type="text" id="codigoCurso" readonly>
+                    <button id="copiarCodigoBtn" class="btn-primary">
                         <i class="fas fa-copy"></i> Copiar
                     </button>
                 </div>
-
-                <!-- Info dinámica del curso seleccionado -->
-                <div id="cursoSeleccionadoInfo"></div>
-
-                <div style="background: #f0f4ff; border-radius: 10px; padding: 15px; margin-top: 20px;">
-                    <p style="margin: 0 0 8px 0; font-weight: 600; color: #333;">📋 Instrucciones para el estudiante:</p>
-                    <ol style="margin: 0; padding-left: 20px; color: #555; line-height: 1.8;">
-                        <li>Ir a <strong>mathspin-production.up.railway.app</strong></li>
-                        <li>Registrarse o iniciar sesión</li>
-                        <li>Ingresar el código del curso</li>
-                        <li>¡Listo! Quedará inscrito automáticamente</li>
-                    </ol>
-                </div>
+                <p class="codigo-info">Los estudiantes pueden usar este código en su panel para unirse al curso.</p>
             </div>
         </div>
     </div>
