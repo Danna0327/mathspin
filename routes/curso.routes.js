@@ -5,9 +5,10 @@ const authMiddleware = require("../middlewares/auth.middleware");
 
 router.use(authMiddleware);
 
-router.post("/crear", cursoController.crearCurso);
-router.get("/docente", cursoController.obtenerCursosDocente);
-router.get("/estudiantes", cursoController.obtenerEstudiantesDocente);
+router.post("/crear",                               cursoController.crearCurso);
+router.get("/docente",                              cursoController.obtenerCursosDocente);
+router.get("/estudiantes",                          cursoController.obtenerEstudiantesDocente);
+router.get("/:cursoId/analytics",                   cursoController.obtenerAnalyticsCurso);
 router.delete("/:cursoId/estudiante/:estudianteId", cursoController.eliminarEstudianteCurso);
 
 module.exports = router;
