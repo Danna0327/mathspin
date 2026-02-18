@@ -7,9 +7,10 @@ const Session = require("../models/session.model");
 // ================================
 exports.crearCurso = async (req, res) => {
   try {
-    const { nombreCurso, codigoCurso } = req.body;
+    const { nombreCurso, nombre, nivel, paralelo, codigoCurso, categoriasActivas } = req.body;
 
-    if (!nombreCurso || !codigoCurso) {
+    // Aceptar tanto el formato viejo (nombreCurso) como el nuevo (nombre, nivel, paralelo)
+    if (!codigoCurso || (!nombreCurso && (!nombre || !nivel || !paralelo))) {
       return res.status(400).json({ mensaje: "Todos los campos son obligatorios" });
     }
 
@@ -22,9 +23,13 @@ exports.crearCurso = async (req, res) => {
     }
 
     const nuevoCurso = new Curso({
-      nombreCurso,
+      nombreCurso: nombreCurso || `${nombre} ${nivel}° ${paralelo}`,
+      nombre,
+      nivel,
+      paralelo,
       codigoCurso,
       codigo: codigoCurso,
+      categoriasActivas: categoriasActivas || ['algebra', 'geometria', 'estadistica', 'numeros', 'funciones', 'trigonometria'],
       docenteId: req.userId,
       estudiantes: []
     });
@@ -35,6 +40,44 @@ exports.crearCurso = async (req, res) => {
 
   } catch (error) {
     console.error("❌ Error al crear curso:", error);
+    res.status(500).json({ mensaje: "Error del servidor", error: error.message });
+  }
+};
+
+// ================================
+// EDITAR CURSO
+// ================================
+exports.editarCurso = async (req, res) => {
+  try {
+    const { cursoId } = req.params;
+    const { nombre, nivel, paralelo, categoriasActivas } = req.body;
+
+    if (!nombre || !nivel || !paralelo) {
+      return res.status(400).json({ mensaje: "Todos los campos son obligatorios" });
+    }
+
+    const curso = await Curso.findOne({ _id: cursoId, docenteId: req.userId });
+    if (!curso) {
+      return res.status(404).json({ mensaje: "Curso no encontrado" });
+    }
+
+    // Actualizar campos
+    curso.nombre = nombre;
+    curso.nivel = nivel;
+    curso.paralelo = paralelo;
+    curso.nombreCurso = `${nombre} ${nivel}° ${paralelo}`;
+    
+    if (categoriasActivas && Array.isArray(categoriasActivas)) {
+      curso.categoriasActivas = categoriasActivas;
+    }
+
+    await curso.save();
+    console.log('✅ Curso editado:', cursoId);
+
+    res.json({ mensaje: "Curso actualizado correctamente", curso });
+
+  } catch (error) {
+    console.error("❌ Error al editar curso:", error);
     res.status(500).json({ mensaje: "Error del servidor", error: error.message });
   }
 };
