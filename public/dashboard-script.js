@@ -121,9 +121,11 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Formularios
   const formCurso = document.getElementById("formCrearCurso");
+  const formEditarCurso = document.getElementById("formEditarCurso");
   const formPregunta = document.getElementById("formPregunta");
   
   if (formCurso) formCurso.onsubmit = crearCurso;
+  if (formEditarCurso) formEditarCurso.onsubmit = editarCurso;
   if (formPregunta) formPregunta.onsubmit = crearPregunta;
   
   // Cargar datos iniciales
@@ -365,7 +367,6 @@ function mostrarCursos(cursos) {
   }
   
   container.innerHTML = cursos.map(c => {
-    // ✅ Manejar ambos campos: codigoCurso o codigo
     const codigo = c.codigoCurso || c.codigo || 'SIN-CODIGO';
     
     return `
@@ -379,12 +380,20 @@ function mostrarCursos(cursos) {
       <p style="color: rgba(255,255,255,0.7); margin: 10px 0;">
         👥 ${c.totalEstudiantes || c.estudiantes?.length || 0} estudiantes
       </p>
-      <button 
-        onclick="copiarCodigo('${codigo}')" 
-        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600;"
-      >
-        📋 Copiar Código
-      </button>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <button 
+          onclick="copiarCodigo('${codigo}')" 
+          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600;"
+        >
+          📋 Copiar
+        </button>
+        <button 
+          onclick='abrirModalEditarCurso(${JSON.stringify(c).replace(/'/g, "&apos;")})'
+          style="background: rgba(251,191,36,0.2); color: #fbbf24; border: 1px solid #fbbf24; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600;"
+        >
+          ✏️ Editar
+        </button>
+      </div>
     </div>
   `}).join('');
 }
@@ -694,6 +703,70 @@ function renderizarAnalytics(data) {
         `;
       }).join('');
     }
+  }
+}
+
+// ========== EDITAR CURSO ==========
+function abrirModalEditarCurso(curso) {
+  console.log('✏️ Abriendo modal editar para:', curso);
+  
+  // Llenar formulario
+  document.getElementById('editarCursoId').value = curso._id;
+  document.getElementById('editarNombreCurso').value = curso.nombre || curso.nombreCurso?.split(' ')[0] || '';
+  document.getElementById('editarNivelCurso').value = curso.nivel || '';
+  document.getElementById('editarParaleloCurso').value = curso.paralelo || '';
+  
+  // Marcar categorías activas
+  const categoriasActivas = curso.categoriasActivas || ['algebra', 'geometria', 'estadistica', 'numeros', 'funciones', 'trigonometria'];
+  document.querySelectorAll('input[name="editarCategorias"]').forEach(checkbox => {
+    checkbox.checked = categoriasActivas.includes(checkbox.value);
+  });
+  
+  abrirModal('modalEditarCurso');
+}
+
+async function editarCurso(e) {
+  e.preventDefault();
+  
+  const cursoId = document.getElementById('editarCursoId').value;
+  const nombre = document.getElementById('editarNombreCurso').value.trim();
+  const nivel = document.getElementById('editarNivelCurso').value.trim();
+  const paralelo = document.getElementById('editarParaleloCurso').value.trim();
+  
+  // Obtener categorías seleccionadas
+  const categoriasActivas = Array.from(document.querySelectorAll('input[name="editarCategorias"]:checked'))
+    .map(cb => cb.value);
+  
+  if (categoriasActivas.length === 0) {
+    alert('Debes seleccionar al menos una categoría');
+    return;
+  }
+  
+  try {
+    console.log('📝 Editando curso:', cursoId);
+    
+    const res = await fetch(`${API_BASE_URL}/cursos/${cursoId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ nombre, nivel, paralelo, categoriasActivas })
+    });
+    
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    
+    const data = await res.json();
+    console.log('✅ Curso editado:', data);
+    
+    cerrarModal('modalEditarCurso');
+    cargarCursos(); // Recargar lista
+    
+    alert('✅ Curso actualizado correctamente');
+    
+  } catch (error) {
+    console.error('❌ Error editando curso:', error);
+    alert('Error al editar el curso');
   }
 }
 
