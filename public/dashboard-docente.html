@@ -234,6 +234,75 @@
         </div>
     </div>
 
+    <!-- Modal Editar Curso -->
+    <div id="modalEditarCurso" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Curso</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="formEditarCurso">
+                <input type="hidden" id="editarCursoId">
+                
+                <div class="form-group">
+                    <label for="editarNombreCurso">Nombre del Curso:</label>
+                    <input type="text" id="editarNombreCurso" required placeholder="ej: Matemáticas">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editarNivelCurso">Nivel:</label>
+                        <input type="text" id="editarNivelCurso" required placeholder="ej: 10">
+                    </div>
+                    <div class="form-group">
+                        <label for="editarParaleloCurso">Paralelo:</label>
+                        <input type="text" id="editarParaleloCurso" required placeholder="ej: A">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">
+                        <i class="fas fa-layer-group"></i> Categorías Activas (para la ruleta):
+                    </label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 6px; background: rgba(102,126,234,0.1); transition: background 0.2s;">
+                            <input type="checkbox" name="editarCategorias" value="algebra" checked>
+                            <span>Álgebra</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 6px; background: rgba(102,126,234,0.1);">
+                            <input type="checkbox" name="editarCategorias" value="geometria" checked>
+                            <span>Geometría</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 6px; background: rgba(102,126,234,0.1);">
+                            <input type="checkbox" name="editarCategorias" value="estadistica" checked>
+                            <span>Estadística</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 6px; background: rgba(102,126,234,0.1);">
+                            <input type="checkbox" name="editarCategorias" value="numeros" checked>
+                            <span>Números</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 6px; background: rgba(102,126,234,0.1);">
+                            <input type="checkbox" name="editarCategorias" value="funciones" checked>
+                            <span>Funciones</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 6px; background: rgba(102,126,234,0.1);">
+                            <input type="checkbox" name="editarCategorias" value="trigonometria" checked>
+                            <span>Trigonometría</span>
+                        </label>
+                    </div>
+                    <small style="color: #666; margin-top: 8px; display: block;">
+                        <i class="fas fa-info-circle"></i> Solo las categorías seleccionadas aparecerán en la ruleta del juego
+                    </small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="cerrarModal('modalEditarCurso')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal Crear/Editar Pregunta -->
     <div id="modalPregunta" class="modal">
         <div class="modal-content large">
