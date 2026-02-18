@@ -6,6 +6,7 @@ const authMiddleware = require("../middlewares/auth.middleware");
 router.use(authMiddleware);
 
 router.post("/crear",                               cursoController.crearCurso);
+router.put("/:cursoId",                             cursoController.editarCurso);
 router.get("/docente",                              cursoController.obtenerCursosDocente);
 router.get("/estudiantes",                          cursoController.obtenerEstudiantesDocente);
 router.get("/:cursoId/analytics",                   cursoController.obtenerAnalyticsCurso);
