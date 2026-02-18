@@ -199,7 +199,17 @@ async function handleLogin(e) {
     }
 
     // Flujo para estudiante
-    console.log('🎮 Estudiante detectado, mostrando selector de dificultad...');
+    console.log('🎮 Estudiante detectado...');
+    
+    // ✅ Si el estudiante NO tiene curso, mostrar pantalla de código primero
+    if (!data.tieneCurso) {
+      showLoading(false);
+      hideLoginModal();
+      mostrarPantallaCodigo(data.token, nombreUsuario);
+      return;
+    }
+
+    console.log('✅ Estudiante con curso asignado, mostrando selector de dificultad...');
     
     document.getElementById("loginUsername").setAttribute("disabled", true);
     document.getElementById("loginPassword").setAttribute("disabled", true);
@@ -938,3 +948,179 @@ document.addEventListener("DOMContentLoaded", () => {
   initSocket();
   testDatabaseConnection();
 });
+
+// ========== MOSTRAR/OCULTAR CAMPOS DE ESTUDIANTE ==========
+function toggleStudentFields() {
+  const tipoUsuario = document.getElementById("tipoUsuario")?.value;
+  const studentFields = document.getElementById("studentFields");
+  
+  if (!studentFields) return;
+  
+  if (tipoUsuario === "estudiante") {
+    studentFields.style.display = "block";
+  } else {
+    studentFields.style.display = "none";
+    // Limpiar campos al ocultar
+    const codigoInput = document.getElementById("codigoCurso");
+    const paraleloInput = document.getElementById("paralelo");
+    if (codigoInput) codigoInput.value = "";
+    if (paraleloInput) paraleloInput.value = "";
+  }
+}
+
+// ========== PANTALLA DE CÓDIGO DE CURSO ==========
+function mostrarPantallaCodigo(token, nombreUsuario) {
+  const overlay = document.createElement('div');
+  overlay.id = 'pantallaCodigo';
+  overlay.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; font-family: 'Segoe UI', sans-serif;
+  `;
+
+  overlay.innerHTML = `
+    <div style="
+      background: white; border-radius: 20px; padding: 40px;
+      max-width: 420px; width: 90%; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    ">
+      <div style="font-size: 3em; margin-bottom: 10px;">🎓</div>
+      <h2 style="color: #333; margin: 0 0 8px 0; font-size: 1.5em;">¡Bienvenido, ${nombreUsuario}!</h2>
+      <p style="color: #666; margin: 0 0 25px 0; font-size: 0.95em;">
+        Para comenzar, ingresa el código de curso que te dio tu docente.
+      </p>
+
+      <div id="codigoError" style="
+        display: none; background: #fef2f2; border: 1px solid #fca5a5;
+        color: #dc2626; padding: 10px; border-radius: 8px; margin-bottom: 15px;
+        font-size: 0.9em;
+      "></div>
+
+      <input 
+        id="inputCodigoCurso" 
+        type="text" 
+        placeholder="Ej: AB1234"
+        maxlength="10"
+        style="
+          width: 100%; padding: 15px; font-size: 1.4em; font-weight: bold;
+          letter-spacing: 6px; text-align: center; text-transform: uppercase;
+          border: 2px solid #ddd; border-radius: 10px; outline: none;
+          box-sizing: border-box; transition: border-color 0.2s;
+        "
+        oninput="this.value = this.value.toUpperCase()"
+        onfocus="this.style.borderColor='#667eea'"
+        onblur="this.style.borderColor='#ddd'"
+      />
+
+      <button 
+        id="btnUnirse"
+        onclick="unirseAlCursoConCodigo('${token}')"
+        style="
+          width: 100%; margin-top: 15px; padding: 14px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white; border: none; border-radius: 10px;
+          font-size: 1em; font-weight: 700; cursor: pointer;
+          transition: opacity 0.2s;
+        "
+        onmouseover="this.style.opacity='0.9'"
+        onmouseout="this.style.opacity='1'"
+      >
+        ✅ Unirme al Curso
+      </button>
+
+      <button 
+        onclick="saltarCodigo('${token}', '${nombreUsuario}')"
+        style="
+          width: 100%; margin-top: 10px; padding: 12px;
+          background: transparent; color: #999;
+          border: 1px solid #ddd; border-radius: 10px;
+          font-size: 0.9em; cursor: pointer;
+        "
+      >
+        Continuar sin código por ahora →
+      </button>
+
+      <p style="color: #aaa; font-size: 0.8em; margin-top: 15px;">
+        💡 Si no tienes código, pídelo a tu docente
+      </p>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  setTimeout(() => {
+    document.getElementById('inputCodigoCurso')?.focus();
+  }, 100);
+
+  document.getElementById('inputCodigoCurso')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') unirseAlCursoConCodigo(token);
+  });
+}
+
+async function unirseAlCursoConCodigo(token) {
+  const input = document.getElementById('inputCodigoCurso');
+  const errorEl = document.getElementById('codigoError');
+  const btn = document.getElementById('btnUnirse');
+  const codigo = input?.value.trim().toUpperCase();
+
+  if (!codigo || codigo.length < 4) {
+    errorEl.textContent = 'Por favor ingresa un código válido';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  btn.textContent = '⏳ Uniéndote...';
+  btn.disabled = true;
+  errorEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/unirse-curso`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ codigoCurso: codigo })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.mensaje || 'Código inválido';
+      errorEl.style.display = 'block';
+      btn.textContent = '✅ Unirme al Curso';
+      btn.disabled = false;
+      return;
+    }
+
+    const overlay = document.getElementById('pantallaCodigo');
+    if (overlay) {
+      overlay.innerHTML = `
+        <div style="text-align: center; color: white;">
+          <div style="font-size: 4em; margin-bottom: 20px;">🎉</div>
+          <h2 style="font-size: 2em; margin-bottom: 10px;">¡Te uniste!</h2>
+          <p style="font-size: 1.2em; opacity: 0.9;">${data.mensaje}</p>
+          <p style="opacity: 0.7; margin-top: 10px;">Cargando el juego...</p>
+        </div>
+      `;
+    }
+
+    setTimeout(() => {
+      document.getElementById('pantallaCodigo')?.remove();
+      window.location.reload();
+    }, 2000);
+
+  } catch (error) {
+    console.error('❌ Error:', error);
+    errorEl.textContent = 'Error de conexión. Intenta de nuevo.';
+    errorEl.style.display = 'block';
+    btn.textContent = '✅ Unirme al Curso';
+    btn.disabled = false;
+  }
+}
+
+function saltarCodigo(token, nombreUsuario) {
+  document.getElementById('pantallaCodigo')?.remove();
+  showMainScreen();
+}
