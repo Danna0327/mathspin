@@ -26,14 +26,18 @@ let isAnswerSelected = false;
 /* =========================================================
    CATEGORÍAS / TIEMPOS
 ========================================================= */
-const categories = [
+// Todas las categorías disponibles
+const todasLasCategorias = [
   { name: "algebra", displayName: "Álgebra", icon: "fas fa-square-root-alt" },
   { name: "trigonometria", displayName: "Trigonometría", icon: "fas fa-wave-square" },
   { name: "geometria", displayName: "Geometría", icon: "fas fa-shapes" },
-  { name: "estadisticas", displayName: "Estadísticas", icon: "fas fa-chart-bar" },
+  { name: "estadistica", displayName: "Estadística", icon: "fas fa-chart-bar" },
   { name: "numeros", displayName: "Números", icon: "fas fa-hashtag" },
   { name: "funciones", displayName: "Funciones", icon: "fas fa-project-diagram" },
 ];
+
+// Categorías activas (se filtran según el curso)
+let categories = [...todasLasCategorias];
 
 const timeByDifficulty = {
   facil: 10,
@@ -892,8 +896,94 @@ function injectArduinoFocusCSS() {
 /* =========================================================
    EVENTOS DOM
 ========================================================= */
+/* =========================================================
+   CARGAR CATEGORÍAS ACTIVAS DEL CURSO
+========================================================= */
+async function cargarCategoriasActivas() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.log('ℹ️ Sin token, usando todas las categorías');
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_BASE_URL}/cursos/categorias-activas`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!res.ok) {
+      console.log('⚠️ Error al cargar categorías, usando todas');
+      return;
+    }
+    
+    const data = await res.json();
+    const categoriasActivas = data.categorias || [];
+    
+    // Filtrar todasLasCategorias para incluir solo las activas
+    categories = todasLasCategorias.filter(cat => categoriasActivas.includes(cat.name));
+    
+    console.log('✅ Categorías activas cargadas:', categories.map(c => c.displayName).join(', '));
+    
+    // Regenerar la ruleta con las nuevas categorías
+    generateWheel();
+    
+  } catch (error) {
+    console.error('❌ Error cargando categorías:', error);
+  }
+}
+
+/* =========================================================
+   GENERAR RULETA DINÁMICA
+========================================================= */
+function generateWheel() {
+  const wheel = document.getElementById('wheel');
+  if (!wheel) return;
+  
+  const numCategories = categories.length;
+  const degreePerSector = 360 / numCategories;
+  
+  // Colores para los sectores
+  const colors = [
+    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
+  ];
+  
+  // Limpiar ruleta
+  wheel.innerHTML = '';
+  
+  // Crear sectores
+  categories.forEach((cat, index) => {
+    const sector = document.createElement('div');
+    sector.className = `sector ${cat.name}`;
+    sector.style.transform = `rotate(${index * degreePerSector}deg)`;
+    sector.style.background = colors[index % colors.length];
+    
+    const content = document.createElement('div');
+    content.className = 'sector-content';
+    content.innerHTML = `
+      <i class="${cat.icon}"></i>
+      <span>${cat.displayName}</span>
+    `;
+    
+    sector.appendChild(content);
+    wheel.appendChild(sector);
+  });
+  
+  console.log(`🎡 Ruleta generada con ${numCategories} categorías`);
+}
+
+/* =========================================================
+   INICIALIZAR APP
+========================================================= */
 function initializeApp() {
   console.log('🚀 Inicializando aplicación...');
+  
+  // Cargar categorías activas del curso (si está logueado)
+  cargarCategoriasActivas();
   
   // Main
   document.getElementById("loginBtn")?.addEventListener("click", showLoginModal);
@@ -902,6 +992,26 @@ function initializeApp() {
   // Modal
   document.querySelector(".close")?.addEventListener("click", hideLoginModal);
   document.getElementById("loginForm")?.addEventListener("submit", handleLogin);
+  
+  // Recuperar contraseña
+  document.getElementById("olvidoContrasenaLink")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    mostrarRecuperar();
+  });
+  document.getElementById("recuperarForm")?.addEventListener("submit", handleRecuperar);
+  
+  // Toggle password en recuperar
+  document.getElementById("toggleRecuperarPassword")?.addEventListener("click", () => {
+    const input = document.getElementById("recuperarPassword");
+    const icon = document.querySelector("#toggleRecuperarPassword i");
+    if (input.type === "password") {
+      input.type = "text";
+      icon.classList.replace("fa-eye", "fa-eye-slash");
+    } else {
+      input.type = "password";
+      icon.classList.replace("fa-eye-slash", "fa-eye");
+    }
+  });
 
   // Register
   document.getElementById("registerForm")?.addEventListener("submit", handleRegister);
@@ -948,6 +1058,61 @@ document.addEventListener("DOMContentLoaded", () => {
   initSocket();
   testDatabaseConnection();
 });
+
+// ========== RECUPERAR CONTRASEÑA ==========
+function mostrarRecuperar() {
+  document.getElementById("loginModal").style.display = "none";
+  document.getElementById("recuperarModal").style.display = "flex";
+}
+
+function cerrarRecuperar() {
+  document.getElementById("recuperarModal").style.display = "none";
+  document.getElementById("recuperarForm").reset();
+  document.getElementById("recuperarMessage").textContent = "";
+  document.getElementById("recuperarMessage").style.color = "#ef4444";
+}
+
+async function handleRecuperar(e) {
+  e.preventDefault();
+  
+  const nombreUsuario = document.getElementById("recuperarUsername").value.trim();
+  const nuevaContrasena = document.getElementById("recuperarPassword").value;
+  const messageEl = document.getElementById("recuperarMessage");
+  
+  if (nuevaContrasena.length < 8) {
+    messageEl.textContent = "La contraseña debe tener mínimo 8 caracteres";
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/recuperar-contrasena`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombreUsuario, nuevaContrasena })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      messageEl.textContent = data.mensaje || "Error al actualizar contraseña";
+      messageEl.style.color = "#ef4444";
+      return;
+    }
+    
+    messageEl.textContent = "✅ " + data.mensaje;
+    messageEl.style.color = "#10b981";
+    
+    setTimeout(() => {
+      cerrarRecuperar();
+      document.getElementById("loginModal").style.display = "flex";
+      document.getElementById("loginUsername").value = nombreUsuario;
+    }, 2000);
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    messageEl.textContent = "Error de conexión. Intenta de nuevo.";
+  }
+}
 
 // ========== MOSTRAR/OCULTAR CAMPOS DE ESTUDIANTE ==========
 function toggleStudentFields() {
