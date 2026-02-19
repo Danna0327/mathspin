@@ -6,6 +6,7 @@ const authMiddleware = require("../middlewares/auth.middleware");
 // Rutas públicas
 router.post("/register", userController.registrarUsuario);
 router.post("/login", userController.iniciarSesion);
+router.post("/recuperar-contrasena", userController.recuperarContrasena);
 
 // Rutas protegidas
 router.post("/unirse-curso", authMiddleware, userController.unirseACurso);
