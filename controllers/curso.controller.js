@@ -61,20 +61,27 @@ exports.editarCurso = async (req, res) => {
       return res.status(404).json({ mensaje: "Curso no encontrado" });
     }
 
-    // Actualizar campos
-    curso.nombre = nombre;
-    curso.nivel = nivel;
-    curso.paralelo = paralelo;
-    curso.nombreCurso = `${nombre} ${nivel}° ${paralelo}`;
+    // Preparar datos de actualización
+    const updateData = {
+      nombre,
+      nivel,
+      paralelo,
+      nombreCurso: `${nombre} ${nivel}° ${paralelo}`
+    };
     
     if (categoriasActivas && Array.isArray(categoriasActivas)) {
-      curso.categoriasActivas = categoriasActivas;
+      updateData.categoriasActivas = categoriasActivas;
     }
 
-    await curso.save();
-    console.log('✅ Curso editado:', cursoId);
+    // Actualizar sin revalidar campos required (el curso ya tiene codigoCurso)
+    const cursoActualizado = await Curso.findByIdAndUpdate(
+      cursoId,
+      updateData,
+      { new: true, runValidators: false }
+    );
 
-    res.json({ mensaje: "Curso actualizado correctamente", curso });
+    console.log('✅ Curso editado:', cursoId);
+    res.json({ mensaje: "Curso actualizado correctamente", curso: cursoActualizado });
 
   } catch (error) {
     console.error("❌ Error al editar curso:", error);
