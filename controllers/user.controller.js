@@ -153,6 +153,41 @@ exports.unirseACurso = async (req, res) => {
 };
 
 // ================================
+// RECUPERAR CONTRASEÑA (Sin email - usando nombre de usuario)
+// ================================
+exports.recuperarContrasena = async (req, res) => {
+  try {
+    const { nombreUsuario, nuevaContrasena } = req.body;
+    
+    if (!nombreUsuario || !nuevaContrasena) {
+      return res.status(400).json({ mensaje: "Nombre de usuario y nueva contraseña son obligatorios" });
+    }
+    
+    // Validar que la contraseña cumple requisitos
+    if (nuevaContrasena.length < 8) {
+      return res.status(400).json({ mensaje: "La contraseña debe tener mínimo 8 caracteres" });
+    }
+    
+    const usuario = await Usuario.findOne({ nombreUsuario });
+    if (!usuario) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+    
+    // Hash de la nueva contraseña
+    const hash = await bcrypt.hash(nuevaContrasena, 10);
+    usuario.contrasena = hash;
+    await usuario.save();
+    
+    console.log(`✅ Contraseña actualizada para: ${nombreUsuario}`);
+    res.json({ mensaje: "Contraseña actualizada correctamente. Ahora puedes iniciar sesión." });
+    
+  } catch (error) {
+    console.error("❌ Error recuperando contraseña:", error);
+    res.status(500).json({ mensaje: "Error al actualizar contraseña", error: error.message });
+  }
+};
+
+// ================================
 // OBTENER PERFIL
 // ================================
 exports.obtenerPerfil = async (req, res) => {
