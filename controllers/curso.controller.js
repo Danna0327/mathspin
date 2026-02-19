@@ -250,6 +250,41 @@ exports.obtenerAnalyticsCurso = async (req, res) => {
 };
 
 // ================================
+// OBTENER CATEGORÍAS ACTIVAS DEL CURSO DEL ESTUDIANTE
+// ================================
+exports.obtenerCategoriasActivas = async (req, res) => {
+  try {
+    const estudianteId = req.userId;
+    
+    // Buscar el usuario para obtener su cursoId
+    const estudiante = await Usuario.findById(estudianteId).lean();
+    if (!estudiante || !estudiante.cursoId) {
+      // Si no tiene curso, devolver todas las categorías
+      return res.json({ 
+        categorias: ['algebra', 'geometria', 'estadistica', 'numeros', 'funciones', 'trigonometria']
+      });
+    }
+    
+    // Buscar el curso
+    const curso = await Curso.findById(estudiante.cursoId).lean();
+    if (!curso) {
+      return res.json({ 
+        categorias: ['algebra', 'geometria', 'estadistica', 'numeros', 'funciones', 'trigonometria']
+      });
+    }
+    
+    const categorias = curso.categoriasActivas || ['algebra', 'geometria', 'estadistica', 'numeros', 'funciones', 'trigonometria'];
+    res.json({ categorias });
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo categorías:', error);
+    res.json({ 
+      categorias: ['algebra', 'geometria', 'estadistica', 'numeros', 'funciones', 'trigonometria']
+    });
+  }
+};
+
+// ================================
 // ELIMINAR ESTUDIANTE DE UN CURSO
 // ================================
 exports.eliminarEstudianteCurso = async (req, res) => {
