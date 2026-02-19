@@ -110,7 +110,12 @@ function showScreen(screenId) {
 
 function showMainScreen() { showScreen("mainScreen"); }
 function showRegisterScreen() { showScreen("registerScreen"); }
-function showGameScreen() { showScreen("gameScreen"); updateUserInfo(); }
+function showGameScreen() { 
+  showScreen("gameScreen"); 
+  updateUserInfo(); 
+  // Regenerar ruleta por si acaso
+  if (categories.length > 0) generateWheel();
+}
 function showQuestionScreen() { showScreen("questionScreen"); }
 function showResultsScreen() { showScreen("resultsScreen"); }
 
@@ -214,6 +219,9 @@ async function handleLogin(e) {
     }
 
     console.log('✅ Estudiante con curso asignado, mostrando selector de dificultad...');
+    
+    // ✅ Cargar categorías activas del curso DESPUÉS del login
+    await cargarCategoriasActivas();
     
     document.getElementById("loginUsername").setAttribute("disabled", true);
     document.getElementById("loginPassword").setAttribute("disabled", true);
@@ -981,9 +989,6 @@ function generateWheel() {
 ========================================================= */
 function initializeApp() {
   console.log('🚀 Inicializando aplicación...');
-  
-  // Cargar categorías activas del curso (si está logueado)
-  cargarCategoriasActivas();
   
   // Main
   document.getElementById("loginBtn")?.addEventListener("click", showLoginModal);
