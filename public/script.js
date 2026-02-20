@@ -26,8 +26,8 @@ let isAnswerSelected = false;
 /* =========================================================
    CATEGORÍAS / TIEMPOS
 ========================================================= */
-// Todas las categorías disponibles
-const todasLasCategorias = [
+// Todas las categorías - SIEMPRE visibles en la ruleta
+const categories = [
   { name: "algebra", displayName: "Álgebra", icon: "fas fa-square-root-alt" },
   { name: "trigonometria", displayName: "Trigonometría", icon: "fas fa-wave-square" },
   { name: "geometria", displayName: "Geometría", icon: "fas fa-shapes" },
@@ -36,8 +36,8 @@ const todasLasCategorias = [
   { name: "funciones", displayName: "Funciones", icon: "fas fa-project-diagram" },
 ];
 
-// Categorías activas (se filtran según el curso)
-let categories = [...todasLasCategorias];
+// Categorías activas/habilitadas por el docente (para filtrar el random)
+let categoriasActivas = [...categories.map(c => c.name)];
 
 const timeByDifficulty = {
   facil: 10,
@@ -113,8 +113,6 @@ function showRegisterScreen() { showScreen("registerScreen"); }
 function showGameScreen() { 
   showScreen("gameScreen"); 
   updateUserInfo(); 
-  // Regenerar ruleta por si acaso
-  if (categories.length > 0) generateWheel();
 }
 function showQuestionScreen() { showScreen("questionScreen"); }
 function showResultsScreen() { showScreen("resultsScreen"); }
@@ -355,30 +353,47 @@ function spinRoulette() {
 
   document.querySelectorAll(".sector").forEach((s) => s.classList.remove("winner"));
 
-  const randomRotation = Math.floor(Math.random() * 360) + 1440;
-  wheel.style.transform = `rotate(${randomRotation}deg)`;
+  // 🎯 RANDOM FILTRADO: Elegir solo de categorías activas
+  const categoriasDisponibles = categories.filter(cat => categoriasActivas.includes(cat.name));
+  
+  if (categoriasDisponibles.length === 0) {
+    console.error('❌ No hay categorías activas');
+    alert('No hay categorías habilitadas para este curso. Contacta a tu docente.');
+    spinBtn.disabled = false;
+    spinBtn.innerHTML = '<i class="fas fa-play"></i> <span>Girar Ruleta</span>';
+    return;
+  }
+  
+  // Elegir aleatoriamente de las categorías activas
+  const categoriaElegida = categoriasDisponibles[Math.floor(Math.random() * categoriasDisponibles.length)];
+  const categoryIndex = categories.findIndex(c => c.name === categoriaElegida.name);
+  
+  console.log(`🎲 Categorías activas: ${categoriasActivas.join(', ')}`);
+  console.log(`🎯 Categoría seleccionada: ${categoriaElegida.displayName}`);
+  
+  // Calcular ángulo destino para esa categoría (60° por sector, 6 sectores)
+  const sectorAngles = {
+    0: 0,    // algebra: 330-30°
+    1: 60,   // trigonometria: 30-90°
+    2: 120,  // geometria: 90-150°
+    3: 180,  // estadistica: 150-210°
+    4: 240,  // numeros: 210-270°
+    5: 300   // funciones: 270-330°
+  };
+  
+  const targetAngle = sectorAngles[categoryIndex];
+  const randomOffset = Math.floor(Math.random() * 40) - 20; // ±20° de variación
+  const finalAngle = targetAngle + randomOffset;
+  const totalRotation = 1440 + finalAngle; // 4 vueltas + ángulo final
+  
+  wheel.style.transform = `rotate(${totalRotation}deg)`;
 
   setTimeout(() => {
-    const finalRotation = randomRotation % 360;
-
-    let categoryIndex;
-    let selectedSector;
-
-    if (finalRotation >= 330 || finalRotation < 30) {
-      categoryIndex = 0; selectedSector = document.querySelector(".sector.algebra");
-    } else if (finalRotation >= 30 && finalRotation < 90) {
-      categoryIndex = 1; selectedSector = document.querySelector(".sector.trigonometry");
-    } else if (finalRotation >= 90 && finalRotation < 150) {
-      categoryIndex = 2; selectedSector = document.querySelector(".sector.geometry");
-    } else if (finalRotation >= 150 && finalRotation < 210) {
-      categoryIndex = 3; selectedSector = document.querySelector(".sector.statistics");
-    } else if (finalRotation >= 210 && finalRotation < 270) {
-      categoryIndex = 4; selectedSector = document.querySelector(".sector.numbers");
-    } else {
-      categoryIndex = 5; selectedSector = document.querySelector(".sector.functions");
-    }
-
-    currentCategory = categories[categoryIndex].name;
+    currentCategory = categoriaElegida.name;
+    
+    // Marcar sector ganador visualmente
+    const selectorClasses = ['algebra', 'trigonometria', 'geometria', 'estadistica', 'numeros', 'funciones'];
+    const selectedSector = document.querySelector(`.sector.${selectorClasses[categoryIndex]}`);
     if (selectedSector) selectedSector.classList.add("winner");
 
     console.log(`🏆 Categoría ganadora: ${currentCategory}`);
@@ -910,7 +925,7 @@ function injectArduinoFocusCSS() {
 async function cargarCategoriasActivas() {
   const token = localStorage.getItem('token');
   if (!token) {
-    console.log('ℹ️ Sin token, usando todas las categorías');
+    console.log('ℹ️ Sin token, todas las categorías habilitadas');
     return;
   }
   
@@ -925,63 +940,14 @@ async function cargarCategoriasActivas() {
     }
     
     const data = await res.json();
-    const categoriasActivas = data.categorias || [];
+    categoriasActivas = data.categorias || categories.map(c => c.name);
     
-    // Filtrar todasLasCategorias para incluir solo las activas
-    categories = todasLasCategorias.filter(cat => categoriasActivas.includes(cat.name));
-    
-    console.log('✅ Categorías activas cargadas:', categories.map(c => c.displayName).join(', '));
-    
-    // Regenerar la ruleta con las nuevas categorías
-    generateWheel();
+    console.log('✅ Categorías activas (para random):', categoriasActivas.join(', '));
+    console.log('🎨 Ruleta visual: Siempre muestra las 6 categorías');
     
   } catch (error) {
     console.error('❌ Error cargando categorías:', error);
   }
-}
-
-/* =========================================================
-   GENERAR RULETA DINÁMICA
-========================================================= */
-function generateWheel() {
-  const wheel = document.getElementById('wheel');
-  if (!wheel) return;
-  
-  const numCategories = categories.length;
-  const degreePerSector = 360 / numCategories;
-  
-  // Colores para los sectores
-  const colors = [
-    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-    'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
-  ];
-  
-  // Limpiar ruleta
-  wheel.innerHTML = '';
-  
-  // Crear sectores
-  categories.forEach((cat, index) => {
-    const sector = document.createElement('div');
-    sector.className = `sector ${cat.name}`;
-    sector.style.transform = `rotate(${index * degreePerSector}deg)`;
-    sector.style.background = colors[index % colors.length];
-    
-    const content = document.createElement('div');
-    content.className = 'sector-content';
-    content.innerHTML = `
-      <i class="${cat.icon}"></i>
-      <span>${cat.displayName}</span>
-    `;
-    
-    sector.appendChild(content);
-    wheel.appendChild(sector);
-  });
-  
-  console.log(`🎡 Ruleta generada con ${numCategories} categorías`);
 }
 
 /* =========================================================
