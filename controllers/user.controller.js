@@ -157,6 +157,68 @@ exports.unirseACurso = async (req, res) => {
 };
 
 // ================================
+// AGREGAR ESTUDIANTE MANUALMENTE (Docente)
+// ================================
+exports.agregarEstudianteManual = async (req, res) => {
+  try {
+    const docenteId = req.userId;
+    const { nombre, apellido, nivel, paralelo, cursoId, nombreUsuario, contrasena } = req.body;
+    
+    // Verificar que el curso pertenece al docente
+    const curso = await Curso.findOne({ _id: cursoId, docenteId });
+    if (!curso) {
+      return res.status(403).json({ mensaje: "No tienes permiso para agregar estudiantes a este curso" });
+    }
+    
+    // Verificar que el nombre de usuario no existe
+    const existe = await Usuario.findOne({ nombreUsuario });
+    if (existe) {
+      return res.status(400).json({ mensaje: "Nombre de usuario ya existe" });
+    }
+    
+    // Hash de contraseña
+    const hash = await bcrypt.hash(contrasena, 10);
+    
+    // Crear estudiante
+    const nuevoEstudiante = new Usuario({
+      nombre,
+      apellido,
+      nombreUsuario,
+      contrasena: hash,
+      rol: "estudiante",
+      nivel,
+      paralelo,
+      cursoId,
+      codigoCurso: curso.codigoCurso || curso.codigo
+    });
+    
+    await nuevoEstudiante.save();
+    
+    // Agregar al array de estudiantes del curso
+    await Curso.findByIdAndUpdate(
+      cursoId,
+      { $addToSet: { estudiantes: nuevoEstudiante._id } }
+    );
+    
+    console.log(`✅ Estudiante ${nombreUsuario} agregado manualmente por docente ${docenteId} al curso ${cursoId}`);
+    
+    res.status(201).json({ 
+      mensaje: "Estudiante agregado correctamente",
+      estudiante: {
+        _id: nuevoEstudiante._id,
+        nombre: nuevoEstudiante.nombre,
+        apellido: nuevoEstudiante.apellido,
+        nombreUsuario: nuevoEstudiante.nombreUsuario
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error al agregar estudiante:", error);
+    res.status(500).json({ mensaje: "Error al agregar estudiante", error: error.message });
+  }
+};
+
+// ================================
 // RECUPERAR CONTRASEÑA (Sin email - usando nombre de usuario)
 // ================================
 exports.recuperarContrasena = async (req, res) => {
