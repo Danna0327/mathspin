@@ -228,9 +228,25 @@
                     <div id="studentFields" style="display: none;">
                         <div class="form-row">
                             <div class="form-group">
+                                <label for="nivel" style="font-weight: 600;">
+                                    <i class="fas fa-layer-group"></i>
+                                    Nivel/Grado <span style="color: #ef4444;">*</span>
+                                </label>
+                                <select id="nivel" name="nivel" style="font-size: 1em; padding: 12px;">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="8">8° (Octavo de Básica)</option>
+                                    <option value="9">9° (Noveno de Básica)</option>
+                                    <option value="10">10° (Décimo de Básica)</option>
+                                    <option value="1BGU">1° BGU (Primero de Bachillerato)</option>
+                                    <option value="2BGU">2° BGU (Segundo de Bachillerato)</option>
+                                    <option value="3BGU">3° BGU (Tercero de Bachillerato)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
                                 <label for="paralelo">
                                     <i class="fas fa-users"></i>
-                                    Paralelo
+                                    Paralelo <span style="color: #ef4444;">*</span>
                                 </label>
                                 <select id="paralelo" name="paralelo">
                                     <option value="">Seleccionar...</option>
@@ -243,6 +259,8 @@
                                 </select>
                             </div>
                         </div>
+                        
+                        <!-- Código de curso -->
                         <div class="form-group" style="margin-top: 10px;">
                             <label for="codigoCurso" style="font-weight: 700; color: #667eea;">
                                 <i class="fas fa-key"></i>
@@ -257,7 +275,11 @@
                                 style="text-transform: uppercase; letter-spacing: 3px; font-weight: bold; font-size: 1.1em;"
                                 oninput="this.value = this.value.toUpperCase()"
                             >
-                            <small style="color: #667eea;">
+                            <small style="color: #667eea; margin-top: 5px; display: block;">
+                                <i class="fas fa-info-circle"></i> Opcional: Si tienes un código de curso, ingrésalo aquí
+                            </small>
+                        </div>
+                    </div>
                                 <i class="fas fa-info-circle"></i> 
                                 Tu docente te dará este código. Puedes ingresarlo después si no lo tienes.
                             </small>
