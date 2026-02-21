@@ -257,12 +257,27 @@ async function handleRegister(e) {
   const nombreUsuario = document.getElementById("username").value;
   const contrasena = document.getElementById("password").value;
 
+  let nivel = null;
   let paralelo = null;
   let codigoCurso = null;
 
   if (tipoUsuario === "estudiante") {
+    nivel = document.getElementById("nivel").value;
     paralelo = document.getElementById("paralelo").value;
     codigoCurso = document.getElementById("codigoCurso").value || null;
+    
+    // Validar que tenga nivel y paralelo
+    if (!nivel) {
+      document.getElementById("registerError").textContent = "Debes seleccionar tu nivel/grado";
+      showLoading(false);
+      return;
+    }
+    
+    if (!paralelo) {
+      document.getElementById("registerError").textContent = "Debes seleccionar tu paralelo";
+      showLoading(false);
+      return;
+    }
   }
 
   if (!validateUsername(nombreUsuario)) {
@@ -289,6 +304,7 @@ async function handleRegister(e) {
         nombreUsuario,
         contrasena,
         rol: tipoUsuario,
+        nivel,
         paralelo,
         codigoCurso,
       }),
@@ -1097,10 +1113,12 @@ function toggleStudentFields() {
   } else {
     studentFields.style.display = "none";
     // Limpiar campos al ocultar
+    const nivelSelect = document.getElementById("nivel");
+    const paraleloSelect = document.getElementById("paralelo");
     const codigoInput = document.getElementById("codigoCurso");
-    const paraleloInput = document.getElementById("paralelo");
+    if (nivelSelect) nivelSelect.value = "";
+    if (paraleloSelect) paraleloSelect.value = "";
     if (codigoInput) codigoInput.value = "";
-    if (paraleloInput) paraleloInput.value = "";
   }
 }
 
