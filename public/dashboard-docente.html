@@ -145,9 +145,14 @@
             <div id="estudiantes" class="tab-content">
                 <div class="estudiantes-header">
                     <h2>Gestión de Estudiantes</h2>
-                    <button id="invitarEstudianteBtn" class="btn-primary">
-                        <i class="fas fa-user-plus"></i> Invitar Estudiante
-                    </button>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="agregarEstudianteBtn" class="btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <i class="fas fa-user-plus"></i> Agregar Estudiante
+                        </button>
+                        <button id="invitarEstudianteBtn" class="btn-primary">
+                            <i class="fas fa-share-alt"></i> Invitar con Código
+                        </button>
+                    </div>
                 </div>
 
                 <div id="estudiantesGrid" class="estudiantes-grid">
@@ -413,6 +418,84 @@
                     </ol>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Agregar Estudiante Manualmente -->
+    <div id="modalAgregarEstudiante" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Agregar Estudiante</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="formAgregarEstudiante">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nuevoNombre">Nombre:</label>
+                        <input type="text" id="nuevoNombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="nuevoApellido">Apellido:</label>
+                        <input type="text" id="nuevoApellido" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nuevoNivel">Nivel/Grado:</label>
+                        <select id="nuevoNivel" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="8">8° (Octavo)</option>
+                            <option value="9">9° (Noveno)</option>
+                            <option value="10">10° (Décimo)</option>
+                            <option value="1BGU">1° BGU</option>
+                            <option value="2BGU">2° BGU</option>
+                            <option value="3BGU">3° BGU</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="nuevoParalelo">Paralelo:</label>
+                        <select id="nuevoParalelo" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                            <option value="E">E</option>
+                            <option value="F">F</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="nuevoCurso">Curso:</label>
+                    <select id="nuevoCurso" required>
+                        <option value="">Seleccionar curso...</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nuevoUsuario">Nombre de Usuario:</label>
+                        <input type="text" id="nuevoUsuario" required minlength="8">
+                        <small><i class="fas fa-info-circle"></i> Mínimo 8 caracteres con números</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="nuevaContrasena">Contraseña:</label>
+                        <input type="text" id="nuevaContrasena" required minlength="8">
+                        <small><i class="fas fa-info-circle"></i> Mínimo 8 caracteres con números y símbolos</small>
+                    </div>
+                </div>
+                
+                <div id="agregarEstudianteError" class="error-message"></div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="cerrarModal('modalAgregarEstudiante')">Cancelar</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-check"></i> Crear Estudiante
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
