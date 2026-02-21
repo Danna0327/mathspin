@@ -10,6 +10,7 @@ router.post("/recuperar-contrasena", userController.recuperarContrasena);
 
 // Rutas protegidas
 router.post("/unirse-curso", authMiddleware, userController.unirseACurso);
+router.post("/agregar-estudiante-manual", authMiddleware, userController.agregarEstudianteManual);
 router.get("/perfil", authMiddleware, userController.obtenerPerfil);
 
 module.exports = router;
