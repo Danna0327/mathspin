@@ -10,7 +10,7 @@ const SECRET = process.env.JWT_SECRET || "clave_secreta_super_segura";
 // ================================
 exports.registrarUsuario = async (req, res) => {
   try {
-    const { nombre, apellido, nombreUsuario, contrasena, rol, paralelo, codigoCurso } = req.body;
+    const { nombre, apellido, nombreUsuario, contrasena, rol, nivel, paralelo, codigoCurso } = req.body;
 
     const existe = await Usuario.findOne({ nombreUsuario });
     if (existe) return res.status(400).json({ mensaje: "Nombre de usuario ya registrado" });
@@ -18,13 +18,16 @@ exports.registrarUsuario = async (req, res) => {
     const hash = await bcrypt.hash(contrasena, 10);
 
     let cursoId = null;
+    let codigoFinal = null;
+    
     if (rol === "estudiante" && codigoCurso) {
-      // ✅ Buscar por codigoCurso O codigo
       const curso = await Curso.findOne({
         $or: [{ codigoCurso }, { codigo: codigoCurso }]
       });
       if (!curso) return res.status(400).json({ mensaje: "Código de curso inválido" });
       cursoId = curso._id;
+      codigoFinal = codigoCurso;
+      console.log(`✅ Estudiante usando código: ${codigoCurso}`);
     }
 
     const nuevoUsuario = new Usuario({
@@ -33,14 +36,15 @@ exports.registrarUsuario = async (req, res) => {
       nombreUsuario,
       contrasena: hash,
       rol,
+      nivel: rol === "estudiante" ? nivel : null,
       paralelo: rol === "estudiante" ? paralelo : null,
       cursoId,
-      codigoCurso: rol === "estudiante" ? codigoCurso : null,
+      codigoCurso: codigoFinal,
     });
 
     await nuevoUsuario.save();
 
-    // ✅ Agregar estudiante al array del curso
+    // Agregar estudiante al array del curso
     if (cursoId) {
       await Curso.findByIdAndUpdate(
         cursoId,
