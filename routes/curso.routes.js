@@ -3,6 +3,7 @@ const router = express.Router();
 const cursoController = require("../controllers/curso.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
+// Rutas protegidas
 router.use(authMiddleware);
 
 router.post("/crear",                               cursoController.crearCurso);
