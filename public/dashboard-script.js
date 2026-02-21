@@ -101,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const nuevoCursoBtn = document.getElementById("nuevoCursoBtn");
   const nuevaPreguntaBtn = document.getElementById("nuevaPreguntaBtn");
   const invitarBtn = document.getElementById("invitarEstudianteBtn");
+  const agregarEstudianteBtn = document.getElementById("agregarEstudianteBtn");
   const logoutBtn = document.getElementById("logoutBtn");
   const copiarBtn = document.getElementById("copiarCodigoBtn");
   
@@ -108,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (nuevoCursoBtn) nuevoCursoBtn.onclick = () => abrirModal("modalCrearCurso");
   if (nuevaPreguntaBtn) nuevaPreguntaBtn.onclick = () => abrirModal("modalPregunta");
   if (invitarBtn) invitarBtn.onclick = () => abrirModalInvitar();
+  if (agregarEstudianteBtn) agregarEstudianteBtn.onclick = () => abrirModalAgregarEstudiante();
   if (logoutBtn) logoutBtn.onclick = cerrarSesion;
   if (copiarBtn) copiarBtn.onclick = copiarCodigoCurso;
   
@@ -123,10 +125,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const formCurso = document.getElementById("formCrearCurso");
   const formEditarCurso = document.getElementById("formEditarCurso");
   const formPregunta = document.getElementById("formPregunta");
+  const formAgregarEstudiante = document.getElementById("formAgregarEstudiante");
   
   if (formCurso) formCurso.onsubmit = crearCurso;
   if (formEditarCurso) formEditarCurso.onsubmit = editarCurso;
   if (formPregunta) formPregunta.onsubmit = crearPregunta;
+  if (formAgregarEstudiante) formAgregarEstudiante.onsubmit = agregarEstudianteManual;
   
   // Cargar datos iniciales
   cargarCursos();
@@ -767,6 +771,98 @@ async function editarCurso(e) {
   } catch (error) {
     console.error('❌ Error editando curso:', error);
     alert('Error al editar el curso');
+  }
+}
+
+// ========== AGREGAR ESTUDIANTE MANUALMENTE ==========
+function abrirModalAgregarEstudiante() {
+  console.log('➕ Abriendo modal agregar estudiante');
+  
+  // Cargar cursos en el selector
+  const selectCurso = document.getElementById('nuevoCurso');
+  selectCurso.innerHTML = '<option value="">Seleccionar curso...</option>';
+  
+  cursosActuales.forEach(curso => {
+    const option = document.createElement('option');
+    option.value = curso._id;
+    option.textContent = `${curso.nombreCurso} (${curso.codigoCurso || curso.codigo})`;
+    selectCurso.appendChild(option);
+  });
+  
+  abrirModal('modalAgregarEstudiante');
+}
+
+async function agregarEstudianteManual(e) {
+  e.preventDefault();
+  
+  const nombre = document.getElementById('nuevoNombre').value.trim();
+  const apellido = document.getElementById('nuevoApellido').value.trim();
+  const nivel = document.getElementById('nuevoNivel').value;
+  const paralelo = document.getElementById('nuevoParalelo').value;
+  const cursoId = document.getElementById('nuevoCurso').value;
+  const nombreUsuario = document.getElementById('nuevoUsuario').value.trim();
+  const contrasena = document.getElementById('nuevaContrasena').value;
+  const errorEl = document.getElementById('agregarEstudianteError');
+  
+  // Validaciones
+  if (!nivel || !paralelo || !cursoId) {
+    errorEl.textContent = 'Todos los campos son obligatorios';
+    return;
+  }
+  
+  if (nombreUsuario.length < 8 || !/\d/.test(nombreUsuario)) {
+    errorEl.textContent = 'El nombre de usuario debe tener mínimo 8 caracteres con números';
+    return;
+  }
+  
+  if (contrasena.length < 8 || !/\d/.test(contrasena) || !/[!@#$%^&*]/.test(contrasena)) {
+    errorEl.textContent = 'La contraseña debe tener mínimo 8 caracteres con números y símbolos';
+    return;
+  }
+  
+  try {
+    console.log('👤 Creando estudiante:', nombreUsuario);
+    
+    const res = await fetch(`${API_BASE_URL}/users/agregar-estudiante-manual`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        nombre,
+        apellido,
+        nivel,
+        paralelo,
+        cursoId,
+        nombreUsuario,
+        contrasena
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      errorEl.textContent = data.mensaje || 'Error al crear estudiante';
+      return;
+    }
+    
+    console.log('✅ Estudiante creado:', data);
+    
+    errorEl.style.color = '#10b981';
+    errorEl.textContent = '✅ Estudiante agregado correctamente';
+    
+    setTimeout(() => {
+      cerrarModal('modalAgregarEstudiante');
+      document.getElementById('formAgregarEstudiante').reset();
+      errorEl.textContent = '';
+      errorEl.style.color = '#ef4444';
+      cargarEstudiantes(); // Recargar lista
+    }, 1500);
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    errorEl.textContent = 'Error de conexión. Intenta de nuevo.';
   }
 }
 
