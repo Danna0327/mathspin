@@ -9,9 +9,10 @@ const userSchema = new mongoose.Schema(
     rol: { type: String, enum: ["estudiante", "docente", "admin"], required: true },
 
     // Campos específicos para estudiantes
-    paralelo: { type: String }, // Solo para estudiante
-    cursoId: { type: mongoose.Schema.Types.ObjectId, ref: "Curso" }, // Curso al que pertenece
-    codigoCurso: { type: String }, // Código del curso ingresado
+    nivel: { type: String }, // 8°, 9°, 10°, 1BGU, 2BGU, 3BGU
+    paralelo: { type: String }, // A, B, C, D, E, F
+    cursoId: { type: mongoose.Schema.Types.ObjectId, ref: "Curso" },
+    codigoCurso: { type: String },
 
     // Campos adicionales
     ultimaConexion: { type: Date, default: Date.now },
